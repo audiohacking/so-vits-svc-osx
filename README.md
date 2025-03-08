@@ -7,6 +7,9 @@
 <img alt="GitHub issues" src="https://img.shields.io/github/issues/PlayVoice/so-vits-svc-5.0">
 <img alt="GitHub" src="https://img.shields.io/github/license/PlayVoice/so-vits-svc-5.0">
 
+<div>
+<div align="left">
+
 ## 5.2 Update
 
 - Whisper now uses a fusion of v2 and v3 models for better content encoding
@@ -46,3 +49,4 @@ Necessary pre-processing:
 3. Manually check generated audio input, remove inputs shorter than 2 seconds or with obivous noise.
 4. Adjust loudness if necessary, recommend Adobe Audiiton.
 5. Put the dataset into the `dataset_raw` directory following the structure below.
+<div>
