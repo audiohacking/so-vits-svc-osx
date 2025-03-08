@@ -10,7 +10,7 @@
 <div>
 <div align="left">
 
-## 5.2 Update
+## 5.2 Update by HorikitaSaku
 
 - Whisper now uses a fusion of v2 and v3 models for better content encoding
 - Replaced CREPE with RMVPE (Robust Model for Pitch Extraction) for more accurate pitch detection
