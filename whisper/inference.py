@@ -38,7 +38,7 @@ def pred_ppg(whisper: Whisper, wavPath, ppgPath, device):
         short = audio[idx_s:idx_s + 15 * 16000]
         idx_s = idx_s + 15 * 16000
         ppgln = 15 * 16000 // 320
-        # short = pad_or_trim(short)
+        short = pad_or_trim(short)
         mel = log_mel_spectrogram(short, n_mels=128).to(device)
         if not (device == "cpu"):
             mel = mel
@@ -50,7 +50,7 @@ def pred_ppg(whisper: Whisper, wavPath, ppgPath, device):
     if (idx_s < audln):
         short = audio[idx_s:audln]
         ppgln = (audln - idx_s) // 320
-        # short = pad_or_trim(short)
+        short = pad_or_trim(short)
         mel = log_mel_spectrogram(short, n_mels=128).to(device)
         if not (device == "cpu"):
             mel = mel
@@ -74,5 +74,5 @@ if __name__ == "__main__":
     ppgPath = args.ppg
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    whisper = load_model(os.path.join("whisper_pretrain", "large-v2.pt"), device)
+    whisper = load_model(os.path.join("whisper_pretrain", "large-v3.pt"), device)
     pred_ppg(whisper, wavPath, ppgPath, device)
