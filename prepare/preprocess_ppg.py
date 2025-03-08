@@ -25,16 +25,28 @@ def load_model(path) -> Whisper:
     return model
 
 
-def pred_ppg(whisper: Whisper, wavPath, ppgPath):
+def pred_ppg(whisper_v2: Whisper, whisper_v3: Whisper, wavPath, ppgPath):
     audio = load_audio(wavPath)
     audln = audio.shape[0]
     ppgln = audln // 320
     audio = pad_or_trim(audio)
-    mel = log_mel_spectrogram(audio, n_mels=128).float().to(whisper.device)
+    mel_v2 = log_mel_spectrogram(audio, n_mels=80).float()
+    mel_v3 = log_mel_spectrogram(audio, n_mels=128).float()
     with torch.no_grad():
-        ppg = whisper.encoder(mel.unsqueeze(0)).squeeze().data.cpu().float().numpy()
-        ppg = ppg[:ppgln,]  # [length, dim=1280]
-        # print(ppg.shape)
+        # Process with whisper v2
+        mel_v2 = mel_v2.to(whisper_v2.device)
+        ppg_v2 = whisper_v2.encoder(mel_v2.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+        ppg_v2 = ppg_v2[:ppgln,]  # [length, dim=1280]
+        
+        # Process with whisper v3
+        mel_v3 = mel_v3.to(whisper_v3.device)
+        ppg_v3 = whisper_v3.encoder(mel_v3.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+        ppg_v3 = ppg_v3[:ppgln,]  # [length, dim=1280]
+        
+        # Concatenate features from both models
+        ppg = np.concatenate([ppg_v2, ppg_v3], axis=1)  # [length, dim=2560]
+        
+        print(ppg.shape)
         np.save(ppgPath, ppg, allow_pickle=False)
 
 
@@ -50,7 +62,8 @@ if __name__ == "__main__":
     wavPath = args.wav
     ppgPath = args.ppg
 
-    whisper = load_model(os.path.join("whisper_pretrain", "large-v3.pt"))
+    whisper_v2 = load_model(os.path.join("whisper_pretrain", "large-v2.pt"))
+    whisper_v3 = load_model(os.path.join("whisper_pretrain", "large-v3.pt"))
     spkPaths = os.listdir(wavPath)
     random.shuffle(spkPaths)
 
@@ -67,4 +80,4 @@ if __name__ == "__main__":
                     path_ppg = f"{ppgPath}/{spks}/{file}.ppg"
                     if os.path.isfile(f"{path_ppg}.npy"):
                         continue
-                    pred_ppg(whisper, path_wav, path_ppg)
+                    pred_ppg(whisper_v2, whisper_v3, path_wav, path_ppg)
