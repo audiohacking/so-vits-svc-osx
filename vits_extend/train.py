@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
+import re
 
 from vits_extend.dataloader import create_dataloader_train
 from vits_extend.dataloader import create_dataloader_eval
@@ -20,7 +21,7 @@ from vits.models import SynthesizerTrn
 from vits import commons
 from vits.losses import kl_loss
 from vits.commons import clip_grad_value_
-
+from vits_extend.vggishdfl import VGGishDFL
 
 def load_part(model, saved_state_dict):
     if hasattr(model, 'module'):
@@ -194,6 +195,12 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
             audio = commons.slice_segments(
                 audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
+            # VGGish Loss
+            
+            vggish_criterion = VGGishDFL(pretrained=True)
+            vggish_criterion.to(device)
+            vggish_criterion.eval()
+            vggish_loss = vggish_criterion(fake_audio.squeeze(1), audio.squeeze(1)) * hp.train.c_VGG
             # Spk Loss
             spk_loss = spkc_criterion(spk, spk_preds, torch.Tensor(spk_preds.size(0))
                                 .to(device).fill_(1.0))
@@ -205,6 +212,23 @@ def train(rank, args, chkpt_path, hp, hp_str):
             # Multi-Resolution STFT Loss
             sc_loss, mag_loss = stft_criterion(fake_audio.squeeze(1), audio.squeeze(1))
             stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
+
+            # Phase Consistency Loss
+            phase_fake = torch.angle(torch.stft(fake_audio.squeeze(1), n_fft=hp.data.filter_length, 
+                                               hop_length=hp.data.hop_length, 
+                                               win_length=hp.data.win_length, 
+                                               return_complex=True))
+            phase_real = torch.angle(torch.stft(audio.squeeze(1), n_fft=hp.data.filter_length, 
+                                               hop_length=hp.data.hop_length, 
+                                               win_length=hp.data.win_length, 
+                                               return_complex=True))
+            phase_loss = F.l1_loss(phase_fake, phase_real) * hp.train.c_pcl
+
+            # High-Frequency Emphasis Loss
+            # Extract high frequency components from mel spectrograms
+            high_freq_mel_fake = mel_fake[:, hp.data.mel_channels//2:, :]
+            high_freq_mel_real = mel_real[:, hp.data.mel_channels//2:, :]
+            hf_loss = F.l1_loss(high_freq_mel_fake, high_freq_mel_real) * hp.train.c_hf
 
             # Generator Loss
             disc_fake = model_d(fake_audio)
@@ -227,7 +251,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
 
             # Loss
-            loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 + spk_loss * 2
+            loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 + spk_loss * 2 + vggish_loss + phase_loss + hf_loss
             loss_g.backward()
 
             if ((step + 1) % hp.train.accum_step == 0) or (step + 1 == len(loader)):
@@ -263,12 +287,15 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_k = loss_kl_f.item()
             loss_r = loss_kl_r.item()
             loss_i = spk_loss.item()
+            loss_v = vggish_loss.item()
+            loss_p = phase_loss.item()
+            loss_h = hf_loss.item()
             current_lr = scheduler_g.get_last_lr()[0]
             if rank == 0 and step % hp.log.info_interval == 0:
                 writer.log_training(
-                    loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), step, current_lr)
-                logger.info("epoch %d | g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f | step %d" % (
-                    epoch, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, step))
+                    loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), loss_v, loss_p, step, current_lr)
+                logger.info("epoch %d | g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f v %.04f p %.04f h %.04f | step %d" % (
+                    epoch, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, loss_v, loss_p, loss_h, step))
 
         if rank == 0 and epoch % hp.log.save_interval == 0:
             save_path = os.path.join(pth_dir, '%s_%04d.pt'
