@@ -43,8 +43,8 @@ def pred_ppg(whisper_v2: Whisper, whisper_v3: Whisper, wavPath, ppgPath):
         ppg_v3 = whisper_v3.encoder(mel_v3.unsqueeze(0)).squeeze().data.cpu().float().numpy()
         ppg_v3 = ppg_v3[:ppgln,]  # [length, dim=1280]
         
-        # Concatenate features from both models
-        ppg = np.concatenate([ppg_v2, ppg_v3], axis=1)  # [length, dim=2560]
+        # Average features from both models
+        ppg = ppg_v2*0.4 + ppg_v3*0.6  # [length, dim=1280]
         
         print(ppg.shape)
         np.save(ppgPath, ppg, allow_pickle=False)
