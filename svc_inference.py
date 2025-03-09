@@ -1,6 +1,7 @@
 import logging
 import sys,os
 from pathlib import Path
+import traceback
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import torch
@@ -14,7 +15,14 @@ from pitch import load_csv_pitch
 from feature_retrieval import IRetrieval, DummyRetrieval, FaissIndexRetrieval, load_retrieve_index
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
+# Configure a handler to log uncaught exceptions
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 def get_speaker_name_from_path(speaker_path: Path) -> str:
     suffixes = "".join(speaker_path.suffixes)
@@ -99,8 +107,10 @@ def svc_infer(model, retrieval: IRetrieval, spk, pit, ppg, vec, hp, device):
         out_index = 0
         out_audio = []
         print(all_frame)
+        print(retrieval.retriv_whisper(ppg[0:2000, :]))
+        print(f" while (out_index < all_frame)",(out_index < all_frame))
         while (out_index < all_frame):
-
+        
             if (out_index == 0):  # start frame
                 cut_s = 0
                 cut_s_out = 0
@@ -116,7 +126,10 @@ def svc_infer(model, retrieval: IRetrieval, spk, pit, ppg, vec, hp, device):
                 cut_e_out = -1 * hop_frame * hop_size
 
             sub_ppg = retrieval.retriv_whisper(ppg[cut_s:cut_e, :])
+            print(sub_ppg.shape)
             sub_vec = retrieval.retriv_hubert(vec[cut_s:cut_e, :])
+            print(sub_vec.shape)
+            
             sub_ppg = sub_ppg.unsqueeze(0).to(device)
             sub_vec = sub_vec.unsqueeze(0).to(device)
             sub_pit = pit[cut_s:cut_e].unsqueeze(0).to(device)
@@ -154,8 +167,8 @@ def main(args):
     if (args.pit == None):
         args.pit = "svc_tmp.pit.csv"
         print(
-            f"Auto run : python pitch/inference.py -w {args.wave} -p {args.pit}")
-        os.system(f"python pitch/inference.py -w {args.wave} -p {args.pit}")
+            f"Auto run : python pitch/rmvpe.py -w {args.wave} -p {args.pit}")
+        os.system(f"python pitch/rmvpe.py -w {args.wave} -p {args.pit}")
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
