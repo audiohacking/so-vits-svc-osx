@@ -19,17 +19,11 @@ def load_model(path, device) -> Whisper:
     del model.encoder.blocks[cut:]
     model.load_state_dict(checkpoint["model_state_dict"], strict=False)
     model.eval()
-    if not (device == "cpu"):
-        model
     model.to(device)
-    # torch.save({
-    #     'dims': checkpoint["dims"],
-    #     'model_state_dict': model.state_dict(),
-    # }, "large-v2.pt")
     return model
 
 
-def pred_ppg(whisper: Whisper, wavPath, ppgPath, device):
+def pred_ppg(whisper_v2: Whisper, whisper_v3: Whisper, wavPath, ppgPath, device):
     audio = load_audio(wavPath)
     audln = audio.shape[0]
     ppg_a = []
@@ -39,26 +33,48 @@ def pred_ppg(whisper: Whisper, wavPath, ppgPath, device):
         idx_s = idx_s + 15 * 16000
         ppgln = 15 * 16000 // 320
         short = pad_or_trim(short)
-        mel = log_mel_spectrogram(short, n_mels=128).to(device)
-        if not (device == "cpu"):
-            mel = mel
+        mel_v2 = log_mel_spectrogram(short, n_mels=80).to(device)
+        mel_v3 = log_mel_spectrogram(short, n_mels=128).to(device)
         with torch.no_grad():
-            mel = mel + torch.randn_like(mel) * 0.1
-            ppg = whisper.encoder(mel.unsqueeze(0)).squeeze().data.cpu().float().numpy()
-            ppg = ppg[:ppgln,]  # [length, dim=1024]
+            # Add noise for augmentation
+            mel_v2 = mel_v2 + torch.randn_like(mel_v2) * 0.01
+            mel_v3 = mel_v3 + torch.randn_like(mel_v3) * 0.01
+            
+            # Process with whisper v2
+            ppg_v2 = whisper_v2.encoder(mel_v2.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+            ppg_v2 = ppg_v2[:ppgln,]  # [length, dim=1280]
+            
+            # Process with whisper v3
+            ppg_v3 = whisper_v3.encoder(mel_v3.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+            ppg_v3 = ppg_v3[:ppgln,]  # [length, dim=1280]
+            
+            # Average features from both models
+            ppg = ppg_v2*0.4 + ppg_v3*0.6  # [length, dim=1280]
             ppg_a.extend(ppg)
+    
     if (idx_s < audln):
         short = audio[idx_s:audln]
         ppgln = (audln - idx_s) // 320
         short = pad_or_trim(short)
-        mel = log_mel_spectrogram(short, n_mels=128).to(device)
-        if not (device == "cpu"):
-            mel = mel
+        mel_v2 = log_mel_spectrogram(short, n_mels=80).to(device)
+        mel_v3 = log_mel_spectrogram(short, n_mels=128).to(device)
         with torch.no_grad():
-            mel = mel + torch.randn_like(mel) * 0.1
-            ppg = whisper.encoder(mel.unsqueeze(0)).squeeze().data.cpu().float().numpy()
-            ppg = ppg[:ppgln,]  # [length, dim=1024]
+            # Add noise for augmentation
+            mel_v2 = mel_v2 + torch.randn_like(mel_v2) * 0.01
+            mel_v3 = mel_v3 + torch.randn_like(mel_v3) * 0.01
+            
+            # Process with whisper v2
+            ppg_v2 = whisper_v2.encoder(mel_v2.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+            ppg_v2 = ppg_v2[:ppgln,]  # [length, dim=1280]
+            
+            # Process with whisper v3
+            ppg_v3 = whisper_v3.encoder(mel_v3.unsqueeze(0)).squeeze().data.cpu().float().numpy()
+            ppg_v3 = ppg_v3[:ppgln,]  # [length, dim=1280]
+            
+            # Average features from both models
+            ppg = ppg_v2*0.4 + ppg_v3*0.6  # [length, dim=1280]
             ppg_a.extend(ppg)
+    
     np.save(ppgPath, ppg_a, allow_pickle=False)
 
 
@@ -74,5 +90,6 @@ if __name__ == "__main__":
     ppgPath = args.ppg
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    whisper = load_model(os.path.join("whisper_pretrain", "large-v3.pt"), device)
-    pred_ppg(whisper, wavPath, ppgPath, device)
+    whisper_v2 = load_model(os.path.join("whisper_pretrain", "large-v2.pt"), device)
+    whisper_v3 = load_model(os.path.join("whisper_pretrain", "large-v3.pt"), device)
+    pred_ppg(whisper_v2, whisper_v3, wavPath, ppgPath, device)
