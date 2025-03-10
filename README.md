@@ -17,7 +17,7 @@
 - Referenced implementation techniques from:
   - [whisper-vits-svc (bigvgan-mix-v2 branch)](https://github.com/PlayVoice/whisper-vits-svc/tree/bigvgan-mix-v2)
   - [Retrieval-based-Voice-Conversion-WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/tree/main)
-
+- Adding ContentVec/data2vec
 
 ## Setup Environment
 
