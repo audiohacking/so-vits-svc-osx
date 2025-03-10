@@ -82,6 +82,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
     init_epoch = 1
     step = 0
+    best_loss = float('inf')
 
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
@@ -132,6 +133,10 @@ def train(rank, args, chkpt_path, hp, hp_str):
             logger.info("use config lr")
         init_epoch = checkpoint['epoch']
         step = checkpoint['step']
+        if 'best_loss' in checkpoint:
+            best_loss = checkpoint['best_loss']
+            if rank == 0:
+                logger.info(f"Loaded best loss: {best_loss}")
 
         if rank == 0:
             if hp_str != checkpoint['hp_str']:
@@ -159,7 +164,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
     spkc_criterion = nn.CosineEmbeddingLoss()
 
     trainloader = create_dataloader_train(hp, args.num_gpus, rank)
-
+    vggish_criterion = VGGishDFL(pretrained=True).to(device,non_blocking=True)
+    
+    # Check if we should use best model saving
+    use_best_model = getattr(hp.log, 'save_best', False)
+    
     for epoch in range(init_epoch, hp.train.epochs):
 
         trainloader.batch_sampler.set_epoch(epoch)
@@ -175,18 +184,22 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
         model_g.train()
         model_d.train()
+        
+        # Track average loss for this epoch
+        epoch_g_loss_sum = 0.0
+        epoch_g_loss_count = 0
 
         for ppg, ppg_l, vec, pit, spk, spec, spec_l, audio, audio_l in loader:
 
-            ppg = ppg.to(device)
-            vec = vec.to(device)
-            pit = pit.to(device)
-            spk = spk.to(device)
-            spec = spec.to(device)
-            audio = audio.to(device)
-            ppg_l = ppg_l.to(device)
-            spec_l = spec_l.to(device)
-            audio_l = audio_l.to(device)
+            ppg = ppg.to(device,non_blocking=True)
+            vec = vec.to(device,non_blocking=True)
+            pit = pit.to(device,non_blocking=True)
+            spk = spk.to(device,non_blocking=True)
+            spec = spec.to(device,non_blocking=True)
+            audio = audio.to(device,non_blocking=True)
+            ppg_l = ppg_l.to(device,non_blocking=True)
+            spec_l = spec_l.to(device,non_blocking=True)
+            audio_l = audio_l.to(device,non_blocking=True)
 
             # generator
             fake_audio, ids_slice, z_mask, \
@@ -197,13 +210,12 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
             # VGGish Loss
             
-            vggish_criterion = VGGishDFL(pretrained=True)
-            vggish_criterion.to(device)
+
             vggish_criterion.eval()
             vggish_loss = vggish_criterion(fake_audio.squeeze(1), audio.squeeze(1)) * hp.train.c_VGG
             # Spk Loss
             spk_loss = spkc_criterion(spk, spk_preds, torch.Tensor(spk_preds.size(0))
-                                .to(device).fill_(1.0))
+                                .to(device,non_blocking=True).fill_(1.0))
             # Mel Loss
             mel_fake = stft.mel_spectrogram(fake_audio.squeeze(1))
             mel_real = stft.mel_spectrogram(audio.squeeze(1))
@@ -251,7 +263,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
 
             # Loss
-            loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 + spk_loss * 2 + vggish_loss + phase_loss + hf_loss
+            orig_loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 + spk_loss * 2
+            loss_g = orig_loss_g + vggish_loss + phase_loss + hf_loss
             loss_g.backward()
 
             if ((step + 1) % hp.train.accum_step == 0) or (step + 1 == len(loader)):
@@ -290,33 +303,74 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_v = vggish_loss.item()
             loss_p = phase_loss.item()
             loss_h = hf_loss.item()
+            o_loss_g = orig_loss_g.item()
+            
+            # Track average loss for best model saving
+            epoch_g_loss_sum += o_loss_g
+            epoch_g_loss_count += 1
+            
             current_lr = scheduler_g.get_last_lr()[0]
             if rank == 0 and step % hp.log.info_interval == 0:
                 writer.log_training(
-                    loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), loss_v, loss_p, step, current_lr)
-                logger.info("epoch %d | g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f v %.04f p %.04f h %.04f | step %d" % (
-                    epoch, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, loss_v, loss_p, loss_h, step))
+                    o_loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), loss_v, loss_p, step, current_lr)
+                logger.info("epoch %d | o_g %.04f g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f v %.04f p %.04f h %.04f | step %d" % (
+                    epoch, o_loss_g, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, loss_v, loss_p, loss_h, step))
 
-        if rank == 0 and epoch % hp.log.save_interval == 0:
-            save_path = os.path.join(pth_dir, '%s_%04d.pt'
-                                     % (args.name, epoch))
-            torch.save({
-                'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
-                'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
-                'optim_g': optim_g.state_dict(),
-                'optim_d': optim_d.state_dict(),
-                'step': step,
-                'epoch': epoch,
-                'hp_str': hp_str,
-            }, save_path)
-            logger.info("Saved checkpoint to: %s" % save_path)
+        # Calculate average loss for this epoch
+        if rank == 0 and epoch_g_loss_count > 0:
+            avg_g_loss = epoch_g_loss_sum / epoch_g_loss_count
+            logger.info(f"Epoch {epoch} average generator loss: {avg_g_loss:.4f}")
+            
+            # Save model based on strategy
+            if use_best_model:
+                # Save if this is the best model so far
+                if avg_g_loss < best_loss:
+                    best_loss = avg_g_loss
+                    save_path = os.path.join(pth_dir, f'{args.name}_best.pt')
+                    torch.save({
+                        'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
+                        'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
+                        'optim_g': optim_g.state_dict(),
+                        'optim_d': optim_d.state_dict(),
+                        'step': step,
+                        'epoch': epoch,
+                        'hp_str': hp_str,
+                        'best_loss': best_loss,
+                    }, save_path)
+                    logger.info(f"Saved best model with loss {best_loss:.4f} to: {save_path}")
+                    
+                    # Also save a numbered version for tracking progress
+                    save_path_numbered = os.path.join(pth_dir, f'{args.name}_{epoch:04d}.pt')
+                    torch.save({
+                        'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
+                        'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
+                        'optim_g': optim_g.state_dict(),
+                        'optim_d': optim_d.state_dict(),
+                        'step': step,
+                        'epoch': epoch,
+                        'hp_str': hp_str,
+                        'best_loss': best_loss,
+                    }, save_path_numbered)
+            elif epoch % hp.log.save_interval == 0:
+                # Save based on interval if not using best model strategy
+                save_path = os.path.join(pth_dir, f'{args.name}_{epoch:04d}.pt')
+                torch.save({
+                    'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
+                    'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
+                    'optim_g': optim_g.state_dict(),
+                    'optim_d': optim_d.state_dict(),
+                    'step': step,
+                    'epoch': epoch,
+                    'hp_str': hp_str,
+                }, save_path)
+                logger.info(f"Saved checkpoint to: {save_path}")
 
         if rank == 0:
             def clean_checkpoints(path_to_models=f'{pth_dir}', n_ckpts_to_keep=hp.log.keep_ckpts, sort_by_time=True):
                 """Freeing up space by deleting saved ckpts
                 Arguments:
                 path_to_models    --  Path to the model directory
-                n_ckpts_to_keep   --  Number of ckpts to keep, excluding sovits5.0_0.pth
+                n_ckpts_to_keep   --  Number of ckpts to keep, excluding sovits5.0_0.pth and best.pt
                                       If n_ckpts_to_keep == 0, do not delete any ckpts
                 sort_by_time      --  True -> chronologically delete ckpts
                                       False -> lexicographically delete ckpts
@@ -327,7 +381,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 time_key = (lambda _f: os.path.getmtime(os.path.join(path_to_models, _f)))
                 sort_key = time_key if sort_by_time else name_key
                 x_sorted = lambda _x: sorted(
-                    [f for f in ckpts_files if f.startswith(_x) and not f.endswith('sovits5.0_0.pth')], key=sort_key)
+                    [f for f in ckpts_files if f.startswith(_x) and not f.endswith('sovits5.0_0.pth') and not f.endswith('_best.pt')], key=sort_key)
                 if n_ckpts_to_keep == 0:
                     to_del = []
                 else:

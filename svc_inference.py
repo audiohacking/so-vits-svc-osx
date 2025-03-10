@@ -160,15 +160,17 @@ def main(args):
 
     if (args.vec == None):
         args.vec = "svc_tmp.vec.npy"
+        content_extractor = "hubert" if args.content_extractor == "hubert" else "contentvec"
         print(
-            f"Auto run : python hubert/inference.py -w {args.wave} -v {args.vec}")
-        os.system(f"python hubert/inference.py -w {args.wave} -v {args.vec}")
+            f"Auto run : python {content_extractor}/inference.py -w {args.wave} -v {args.vec}")
+        os.system(f"python {content_extractor}/inference.py -w {args.wave} -v {args.vec}")
 
     if (args.pit == None):
         args.pit = "svc_tmp.pit.csv"
+        pitch_extractor = "crepe" if args.pitch_extractor == "crepe" else "rmvpe"
         print(
-            f"Auto run : python pitch/rmvpe.py -w {args.wave} -p {args.pit}")
-        os.system(f"python pitch/rmvpe.py -w {args.wave} -p {args.pit}")
+            f"Auto run : python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
+        os.system(f"python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -239,6 +241,10 @@ if __name__ == '__main__':
                         help="Path of pitch csv file.")
     parser.add_argument('--shift', type=int, default=0,
                         help="Pitch shift key.")
+    parser.add_argument('--pitch-extractor', type=str, default='rmvpe', choices=['rmvpe', 'crepe'],
+                        help="Pitch extraction algorithm to use (rmvpe or crepe).")
+    parser.add_argument('--content-extractor', type=str, default='contentvec', choices=['contentvec', 'hubert'],
+                        help="Content extraction model to use (contentvec or hubert).")
 
     parser.add_argument('--enable-retrieval', action="store_true",
                         help="Enable index feature retrieval")
@@ -252,7 +258,7 @@ if __name__ == '__main__':
                         help='path to hubert index file. Default data_svc/indexes/speaker.../%prefix%hubert.index')
     parser.add_argument('--whisper-index-path', required=False,
                         help='path to whisper index file. Default data_svc/indexes/speaker.../%prefix%whisper.index')
-
+    
     parser.add_argument('--debug', action="store_true")
     args = parser.parse_args()
 

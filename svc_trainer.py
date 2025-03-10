@@ -1,12 +1,13 @@
 import sys,os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import argparse
 import torch
+torch.hub.set_dir(r'E:\.cache\torch\hub')
 import torch.multiprocessing as mp
 from omegaconf import OmegaConf
 
 from vits_extend.train import train
-
 torch.backends.cudnn.benchmark = True
 
 
