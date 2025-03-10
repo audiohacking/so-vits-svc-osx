@@ -83,6 +83,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
     init_epoch = 1
     step = 0
     best_loss = float('inf')
+    best_interval_loss = float('inf')
+    last_best_interval = 0
 
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
@@ -168,6 +170,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     
     # Check if we should use best model saving
     use_best_model = getattr(hp.log, 'save_best', False)
+    best_interval = getattr(hp.log, 'best_interval', 100)
     
     for epoch in range(init_epoch, hp.train.epochs):
 
@@ -323,10 +326,16 @@ def train(rank, args, chkpt_path, hp, hp_str):
             
             # Save model based on strategy
             if use_best_model:
-                # Save if this is the best model so far
-                if avg_g_loss < best_loss:
-                    best_loss = avg_g_loss
-                    save_path = os.path.join(pth_dir, f'{args.name}_best.pt')
+                current_interval = epoch // best_interval
+                if current_interval > last_best_interval:
+                    # Reset best loss for new interval
+                    best_interval_loss = float('inf')
+                    last_best_interval = current_interval
+                
+                # Save if this is the best model in current interval
+                if avg_g_loss < best_interval_loss:
+                    best_interval_loss = avg_g_loss
+                    save_path = os.path.join(pth_dir, f'{args.name}_best_{current_interval * best_interval}-{(current_interval + 1) * best_interval}.pt')
                     torch.save({
                         'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
                         'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
@@ -335,12 +344,12 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         'step': step,
                         'epoch': epoch,
                         'hp_str': hp_str,
-                        'best_loss': best_loss,
+                        'best_loss': best_interval_loss,
                     }, save_path)
-                    logger.info(f"Saved best model with loss {best_loss:.4f} to: {save_path}")
+                    logger.info(f"Saved best model for interval {current_interval * best_interval}-{(current_interval + 1) * best_interval} with loss {best_interval_loss:.4f} to: {save_path}")
                     
-                    # Also save a numbered version for tracking progress
-                    save_path_numbered = os.path.join(pth_dir, f'{args.name}_{epoch:04d}.pt')
+                    # Save top k models for current interval
+                    save_path_numbered = os.path.join(pth_dir, f'{args.name}_best_top{hp.log.keep_ckpts}_{epoch:04d}.pt')
                     torch.save({
                         'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
                         'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
@@ -349,7 +358,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         'step': step,
                         'epoch': epoch,
                         'hp_str': hp_str,
-                        'best_loss': best_loss,
+                        'best_loss': best_interval_loss,
                     }, save_path_numbered)
             elif epoch % hp.log.save_interval == 0:
                 # Save based on interval if not using best model strategy
@@ -370,22 +379,45 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 """Freeing up space by deleting saved ckpts
                 Arguments:
                 path_to_models    --  Path to the model directory
-                n_ckpts_to_keep   --  Number of ckpts to keep, excluding sovits5.0_0.pth and best.pt
+                n_ckpts_to_keep   --  Number of ckpts to keep per interval when using best model saving
                                       If n_ckpts_to_keep == 0, do not delete any ckpts
                 sort_by_time      --  True -> chronologically delete ckpts
                                       False -> lexicographically delete ckpts
                 """
                 assert isinstance(n_ckpts_to_keep, int) and n_ckpts_to_keep >= 0
                 ckpts_files = [f for f in os.listdir(path_to_models) if os.path.isfile(os.path.join(path_to_models, f))]
-                name_key = (lambda _f: int(re.compile(f'{args.name}_(\d+)\.pt').match(_f).group(1)))
-                time_key = (lambda _f: os.path.getmtime(os.path.join(path_to_models, _f)))
-                sort_key = time_key if sort_by_time else name_key
-                x_sorted = lambda _x: sorted(
-                    [f for f in ckpts_files if f.startswith(_x) and not f.endswith('sovits5.0_0.pth') and not f.endswith('_best.pt')], key=sort_key)
-                if n_ckpts_to_keep == 0:
+                
+                if use_best_model:
+                    # Group checkpoints by interval
+                    interval_ckpts = {}
+                    for f in ckpts_files:
+                        if f.startswith(f'{args.name}_') and f.endswith('.pt'):
+                            # Extract interval from filename
+                            interval_match = re.search(r'best_top\d+_(\d+)\.pt$', f)
+                            if interval_match:
+                                epoch_num = int(interval_match.group(1))
+                                interval = epoch_num // best_interval
+                                if interval not in interval_ckpts:
+                                    interval_ckpts[interval] = []
+                                interval_ckpts[interval].append(f)
+                    
+                    # Keep only n_ckpts_to_keep files per interval
                     to_del = []
+                    for interval, files in interval_ckpts.items():
+                        if n_ckpts_to_keep > 0:
+                            files.sort(key=lambda f: os.path.getmtime(os.path.join(path_to_models, f)) if sort_by_time else f)
+                            to_del.extend([os.path.join(path_to_models, f) for f in files[:-n_ckpts_to_keep]])
                 else:
-                    to_del = [os.path.join(path_to_models, fn) for fn in x_sorted(f'{args.name}')[:-n_ckpts_to_keep]]
+                    # Original behavior for non-best-model saving
+                    name_key = (lambda _f: int(re.compile(f'{args.name}_(\d+)\.pt').match(_f).group(1)))
+                    time_key = (lambda _f: os.path.getmtime(os.path.join(path_to_models, _f)))
+                    sort_key = time_key if sort_by_time else name_key
+                    x_sorted = lambda _x: sorted([f for f in ckpts_files if f.startswith(_x) and not f.endswith('sovits5.0_0.pth')], key=sort_key)
+                    if n_ckpts_to_keep == 0:
+                        to_del = []
+                    else:
+                        to_del = [os.path.join(path_to_models, fn) for fn in x_sorted(f'{args.name}')[:-n_ckpts_to_keep]]
+                
                 del_info = lambda fn: logger.info(f"Free up space by deleting ckpt {fn}")
                 del_routine = lambda x: [os.remove(x), del_info(x)]
                 rs = [del_routine(fn) for fn in to_del]
