@@ -348,18 +348,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     }, save_path)
                     logger.info(f"Saved best model for interval {current_interval * best_interval}-{(current_interval + 1) * best_interval} with loss {best_interval_loss:.4f} to: {save_path}")
                     
-                    # Save top k models for current interval
-                    save_path_numbered = os.path.join(pth_dir, f'{args.name}_best_top{hp.log.keep_ckpts}_{epoch:04d}.pt')
-                    torch.save({
-                        'model_g': (model_g.module if args.num_gpus > 1 else model_g).state_dict(),
-                        'model_d': (model_d.module if args.num_gpus > 1 else model_d).state_dict(),
-                        'optim_g': optim_g.state_dict(),
-                        'optim_d': optim_d.state_dict(),
-                        'step': step,
-                        'epoch': epoch,
-                        'hp_str': hp_str,
-                        'best_loss': best_interval_loss,
-                    }, save_path_numbered)
             elif epoch % hp.log.save_interval == 0:
                 # Save based on interval if not using best model strategy
                 save_path = os.path.join(pth_dir, f'{args.name}_{epoch:04d}.pt')
@@ -393,13 +381,12 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     for f in ckpts_files:
                         if f.startswith(f'{args.name}_') and f.endswith('.pt'):
                             # Extract interval from filename
-                            interval_match = re.search(r'best_top\d+_(\d+)\.pt$', f)
+                            interval_match = re.search(r'best_(\d+)-\d+\.pt$', f)
                             if interval_match:
-                                epoch_num = int(interval_match.group(1))
-                                interval = epoch_num // best_interval
-                                if interval not in interval_ckpts:
-                                    interval_ckpts[interval] = []
-                                interval_ckpts[interval].append(f)
+                                interval_start = int(interval_match.group(1))
+                                if interval_start not in interval_ckpts:
+                                    interval_ckpts[interval_start] = []
+                                interval_ckpts[interval_start].append(f)
                     
                     # Keep only n_ckpts_to_keep files per interval
                     to_del = []
