@@ -167,7 +167,7 @@ def main(args):
 
     if (args.pit == None):
         args.pit = "svc_tmp.pit.csv"
-        pitch_extractor = "crepe" if args.pitch_extractor == "crepe" else "rmvpe"
+        pitch_extractor = "crepe" if args.pitch_extractor == "crepe" else "rmvpe" if args.pitch_extractor == "rmvpe" else "all"
         print(
             f"Auto run : python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
         os.system(f"python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
@@ -241,7 +241,7 @@ if __name__ == '__main__':
                         help="Path of pitch csv file.")
     parser.add_argument('--shift', type=int, default=0,
                         help="Pitch shift key.")
-    parser.add_argument('--pitch-extractor', type=str, default='rmvpe', choices=['rmvpe', 'crepe'],
+    parser.add_argument('--pitch-extractor', type=str, default='rmvpe', choices=['rmvpe', 'crepe','all'],
                         help="Pitch extraction algorithm to use (rmvpe or crepe).")
     parser.add_argument('--content-extractor', type=str, default='contentvec', choices=['contentvec', 'hubert'],
                         help="Content extraction model to use (contentvec or hubert).")
