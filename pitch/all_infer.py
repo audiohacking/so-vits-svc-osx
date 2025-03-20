@@ -60,7 +60,7 @@ def compute_f0_voice(filename, device, model_path):
     return f0
 
 
-def compute_f0_sing(filename, device, model_path):
+def compute_f0_sing(filename, device, model_path, crepe_weight=0.85, rmvpe_weight=0.15):
     # Load audio
     audio, sr = librosa.load(filename, sr=16000)
     assert sr == 16000
@@ -96,7 +96,7 @@ def compute_f0_sing(filename, device, model_path):
     pitch_rmvpe = move_average(pitch_rmvpe, 5)
     
     # Combine predictions with weights
-    f0 = pitch_crepe * 0.85 + pitch_rmvpe * 0.15
+    f0 = pitch_crepe * crepe_weight + pitch_rmvpe * rmvpe_weight
     
     return f0
 
@@ -126,12 +126,15 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--wav", help="wav", dest="wav", required=True)
     parser.add_argument("-p", "--pit", help="pit", dest="pit", required=True)  # csv for excel
     parser.add_argument("-m", "--model", help="Path to the RMVPE model", dest="model", default="rmvpe_pretrain/rmvpe.pt")
+    parser.add_argument("--crepe-weight", type=float, default=0.8, help="Weight for CREPE prediction")
+    parser.add_argument("--rmvpe-weight", type=float, default=0.2, help="Weight for RMVPE prediction")
+    
     args = parser.parse_args()
     print(args.wav)
     print(args.pit)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    pitch = compute_f0_sing(args.wav, device, args.model)
+    pitch = compute_f0_sing(args.wav, device, args.model, args.crepe_weight, args.rmvpe_weight)
     save_csv_pitch(pitch, args.pit)
     # tmp = load_csv_pitch(args.pit)
     # save_csv_pitch(tmp, "tmp.csv")
