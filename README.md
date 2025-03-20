@@ -10,15 +10,18 @@
 <div>
 <div align="left">
 
-## 5.8 Update by HorikitaSaku
+## 5.11 Update by HorikitaSaku
 
-- Whisper now uses a fusion of v2 and v3 models for better content encoding
-- Replaced CREPE with RMVPE (Robust Model for Pitch Extraction) for more accurate pitch detection
-- Referenced implementation techniques from:
-  - [whisper-vits-svc (bigvgan-mix-v2 branch)](https://github.com/PlayVoice/whisper-vits-svc/tree/bigvgan-mix-v2)
-  - [Retrieval-based-Voice-Conversion-WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/tree/main)
-- Adding ContentVec/data2vec
-- Adding phase loss/high frequency mel loss/vggish loss
+- Added data2vec as content encoder for improved semantic representation
+- Implemented hybrid pitch detection: 75% CREPE + 15% RMVPE for more robust pitch extraction
+- Added Mel Cepstrum loss for better spectral envelope matching
+- Continued improvements from previous versions:
+  - Whisper fusion of v2 and v3 models for content encoding
+  - Phase loss, high frequency mel loss, and vggish loss for enhanced audio quality
+  - ContentVec integration for better content representation
+  - Referenced implementation techniques from:
+    - [whisper-vits-svc (bigvgan-mix-v2 branch)](https://github.com/PlayVoice/whisper-vits-svc/tree/bigvgan-mix-v2)
+    - [Retrieval-based-Voice-Conversion-WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/tree/main)
 
 ## Setup Environment
 
