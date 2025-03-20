@@ -28,7 +28,7 @@ data:
   filter_length: 1024
   hop_length: 320
   win_length: 1024
-  mel_channels: 256
+  mel_channels: 128
   mel_fmin: 50.0
   mel_fmax: 16000.0
 #############################
