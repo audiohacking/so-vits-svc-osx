@@ -32,7 +32,8 @@ class FaissIndexRetrieval(IRetrieval):
     def __init__(self, hubert_index: FaissRetrievableFeatureIndex, whisper_index: FaissRetrievableFeatureIndex) -> None:
         self._hubert_index = hubert_index
         self._whisper_index = whisper_index
-
+        print(hubert_index)
+        print(whisper_index)
     def retriv_whisper(self, vec: torch.Tensor) -> torch.Tensor:
         logger.debug("start retriv whisper")
         np_vec = self._whisper_index.retriv(vec.numpy())

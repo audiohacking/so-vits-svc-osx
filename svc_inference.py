@@ -160,7 +160,7 @@ def main(args):
 
     if (args.vec == None):
         args.vec = "svc_tmp.vec.npy"
-        content_extractor = "hubert" if args.content_extractor == "hubert" else "contentvec"
+        content_extractor = "hubert" if args.content_extractor == "hubert" else "data2vec" if args.content_extractor == "data2vec" else "contentvec"
         print(
             f"Auto run : python {content_extractor}/inference.py -w {args.wave} -v {args.vec}")
         os.system(f"python {content_extractor}/inference.py -w {args.wave} -v {args.vec}")
@@ -168,9 +168,14 @@ def main(args):
     if (args.pit == None):
         args.pit = "svc_tmp.pit.csv"
         pitch_extractor = "crepe" if args.pitch_extractor == "crepe" else "rmvpe" if args.pitch_extractor == "rmvpe" else "all"
-        print(
-            f"Auto run : python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
-        os.system(f"python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
+        if pitch_extractor == "all":
+            print(
+                f"Auto run : python pitch/all_infer.py -w {args.wave} -p {args.pit} --crepe-weight {args.crepe_weight} --rmvpe-weight {args.rmvpe_weight}")
+            os.system(f"python pitch/all_infer.py -w {args.wave} -p {args.pit} --crepe-weight {args.crepe_weight} --rmvpe-weight {args.rmvpe_weight}")
+        else:
+            print(
+                f"Auto run : python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
+            os.system(f"python pitch/{pitch_extractor}_infer.py -w {args.wave} -p {args.pit}")
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -243,8 +248,13 @@ if __name__ == '__main__':
                         help="Pitch shift key.")
     parser.add_argument('--pitch-extractor', type=str, default='rmvpe', choices=['rmvpe', 'crepe','all'],
                         help="Pitch extraction algorithm to use (rmvpe or crepe).")
-    parser.add_argument('--content-extractor', type=str, default='contentvec', choices=['contentvec', 'hubert'],
-                        help="Content extraction model to use (contentvec or hubert).")
+    parser.add_argument('--content-extractor', type=str, default='contentvec', choices=['contentvec', 'hubert', 'data2vec'],
+                        help="Content extraction model to use (contentvec, hubert, or data2vec).")
+    parser.add_argument('--crepe-weight', type=float, default=0.8,
+                        help="Weight for CREPE prediction")
+    parser.add_argument('--rmvpe-weight', type=float, default=0.2,
+                        help="Weight for RMVPE prediction")
+
 
     parser.add_argument('--enable-retrieval', action="store_true",
                         help="Enable index feature retrieval")

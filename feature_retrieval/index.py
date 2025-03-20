@@ -71,7 +71,7 @@ class FaissRVCRetrievableFeatureIndex(FaissRetrievableFeatureIndex):
     retrieve voice encoded features with algorith from RVC repository
     https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
     """
-
+    
     @property
     def supported_distance(self) -> Any:
         return faiss.METRIC_L2

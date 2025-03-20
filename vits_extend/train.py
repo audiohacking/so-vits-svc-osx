@@ -224,6 +224,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
             mel_real = stft.mel_spectrogram(audio.squeeze(1))
             mel_loss = F.l1_loss(mel_fake, mel_real) * hp.train.c_mel
 
+            # Mel Cepstrum Loss
+            mel_cepstrum_fake = stft.mel_cepstrum(fake_audio.squeeze(1))
+            mel_cepstrum_real = stft.mel_cepstrum(audio.squeeze(1))
+            mel_cepstrum_loss = F.l1_loss(mel_cepstrum_fake, mel_cepstrum_real) * hp.train.c_mel_cepstrum
+
             # Multi-Resolution STFT Loss
             sc_loss, mag_loss = stft_criterion(fake_audio.squeeze(1), audio.squeeze(1))
             stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
@@ -267,7 +272,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
             # Loss
             orig_loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 + spk_loss * 2
-            loss_g = orig_loss_g + vggish_loss + phase_loss + hf_loss
+            loss_g = orig_loss_g + vggish_loss + phase_loss + hf_loss + mel_cepstrum_loss
             loss_g.backward()
 
             if ((step + 1) % hp.train.accum_step == 0) or (step + 1 == len(loader)):
@@ -306,6 +311,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_v = vggish_loss.item()
             loss_p = phase_loss.item()
             loss_h = hf_loss.item()
+            loss_mc = mel_cepstrum_loss.item()
             o_loss_g = orig_loss_g.item()
             
             # Track average loss for best model saving
@@ -315,9 +321,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
             current_lr = scheduler_g.get_last_lr()[0]
             if rank == 0 and step % hp.log.info_interval == 0:
                 writer.log_training(
-                    o_loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), loss_v, loss_p, step, current_lr)
-                logger.info("epoch %d | o_g %.04f g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f v %.04f p %.04f h %.04f | step %d" % (
-                    epoch, o_loss_g, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, loss_v, loss_p, loss_h, step))
+                    o_loss_g, loss_d, loss_m, loss_s, loss_k, loss_r, score_loss.item(), loss_v, loss_p, loss_h, loss_mc, step, current_lr)
+                logger.info("epoch %d | o_g %.04f g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f i %.04f v %.04f p %.04f h %.04f mc %.04f | step %d" % (
+                    epoch, o_loss_g, loss_g, loss_m, loss_s, loss_d, loss_k, loss_r, loss_i, loss_v, loss_p, loss_h, loss_mc, step))
 
         # Calculate average loss for this epoch
         if rank == 0 and epoch_g_loss_count > 0:

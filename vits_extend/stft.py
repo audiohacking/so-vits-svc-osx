@@ -96,6 +96,39 @@ class TacotronSTFT(torch.nn.Module):
 
         return spec
 
+    def mel_cepstrum(self, y):
+        """Computes mel cepstrum from a batch of waves
+        PARAMS
+        ------
+        y: Variable(torch.FloatTensor) with shape (B, T) in range [-1, 1]
+
+        RETURNS
+        -------
+        mel_cepstrum_output: torch.FloatTensor of shape (B, n_mel_channels, T)
+        """
+        assert(torch.min(y.data) >= -1)
+        assert(torch.max(y.data) <= 1)
+
+        # First compute mel spectrogram
+        mel_spec = self.mel_spectrogram(y)
+        
+        # Remove normalization (convert back from log scale)
+        mel_spec = torch.exp(mel_spec)
+        
+        # Apply log to the mel spectrogram (avoiding log(0))
+        log_mel_spec = torch.log(torch.clamp(mel_spec, min=1e-5))
+        
+        # Compute the cepstrum using DCT (Discrete Cosine Transform)
+        # We use FFT to approximate DCT since PyTorch doesn't have a direct DCT implementation
+        # First pad the log mel spectrogram for FFT
+        padded = torch.nn.functional.pad(log_mel_spec, (0, 0, 0, self.n_mel_channels))
+        
+        # Compute FFT and take real part (equivalent to DCT for real and even inputs)
+        mel_cepstrum = torch.fft.rfft(padded, dim=1).real
+        
+        # Return only the first n_mel_channels coefficients
+        return mel_cepstrum[:, :self.n_mel_channels, :]
+
     def spectral_normalize_torch(self, magnitudes):
         output = self.dynamic_range_compression_torch(magnitudes)
         return output

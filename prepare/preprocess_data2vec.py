@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import torch
 import librosa
+import torch.nn as nn
 
 from tqdm import tqdm
 from transformers import Data2VecAudioModel, Wav2Vec2Processor
@@ -32,7 +33,18 @@ def pred_vec(model, processor, wavPath, vecPath, device):
     # Get embeddings
     with torch.no_grad():
         outputs = model(input_values)
-        vec = outputs.last_hidden_state.squeeze().cpu().numpy()
+        hidden_states = outputs.last_hidden_state.squeeze()
+        
+        # Apply global mixed pooling (GAP + GMP)
+        avg_pool = nn.AdaptiveAvgPool1d(256)
+        max_pool = nn.AdaptiveMaxPool1d(256)
+        
+        avg_pooled = avg_pool(hidden_states)
+        max_pooled = max_pool(hidden_states)
+        
+        # Combine average and max pooling results
+        vec = (avg_pooled + max_pooled) / 2
+        vec = vec.cpu().numpy()
     
     np.save(vecPath, vec, allow_pickle=False)
 
@@ -51,7 +63,7 @@ if __name__ == "__main__":
     vecPath = args.vec
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, processor = load_model("facebook/data2vec-audio-large-100h", device)
+    model, processor = load_model("facebook/data2vec-audio-large-960h", device)
 
     for spks in os.listdir(wavPath):
         if os.path.isdir(f"./{wavPath}/{spks}"):
