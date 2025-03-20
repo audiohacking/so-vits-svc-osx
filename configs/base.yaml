@@ -1,30 +1,34 @@
 train:
   model: "soyo"
-  seed: 42
+  seed: 3407
   epochs: 20000
-  learning_rate: 5e-5
-  load_optim: True
+  learning_rate: 1e-5
+  load_optim: False
   betas: [0.8, 0.99]
   lr_decay: 0.999875
   eps: 1e-9
-  batch_size: 16
+  batch_size: 32
   accum_step: 2
   c_stft: 9
   c_mel: 1.
+  c_mel_cepstrum: 0.5
   c_kl: 0.2
+  c_pcl: 0
+  c_VGG: 0
+  c_hf: 0
   port: 8001
-  pretrain: "./vits_pretrain/sovits5.0.pretrain.pth"
+  pretrain: "./vits_pretrain/soyo5.9_pretrain.pth"
 #############################
 data: 
-  training_files: "files/train.txt"
-  validation_files: "files/valid.txt"
+  training_files: "files stage 5/train.txt"
+  validation_files: "files stage 5/valid.txt"
   segment_size: 8000  # WARNING: base on hop_length
   max_wav_value: 32768.0
   sampling_rate: 32000
   filter_length: 1024
   hop_length: 320
   win_length: 1024
-  mel_channels: 100
+  mel_channels: 256
   mel_fmin: 50.0
   mel_fmax: 16000.0
 #############################
@@ -59,12 +63,14 @@ mrd:
 #############################
 log:
   info_interval: 100
-  eval_interval: 1
-  save_interval: 1000
+  eval_interval: 10
+  save_interval: 5000
   num_audio: 6
   pth_dir: 'chkpt'
   log_dir: 'logs'
   keep_ckpts: 0
+  save_best: True
+  best_interval: 500
 #############################
 dist_config:
   dist_backend: "nccl"
