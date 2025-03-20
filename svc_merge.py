@@ -7,12 +7,16 @@ import collections
 def load_model(checkpoint_path):
     assert os.path.isfile(checkpoint_path)
     checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
-    saved_state_dict = checkpoint_dict["model_g"]
-    return saved_state_dict
+    saved_state_dict_g = checkpoint_dict["model_g"]
+    saved_state_dict_d = checkpoint_dict.get("model_d", None)
+    return saved_state_dict_g, saved_state_dict_d
 
 
-def save_model(state_dict, checkpoint_path):
-    torch.save({'model_g': state_dict}, checkpoint_path)
+def save_model(state_dict_g, state_dict_d, checkpoint_path):
+    if state_dict_d is None:
+        torch.save({'model_g': state_dict_g}, checkpoint_path)
+    else:
+        torch.save({'model_g': state_dict_g, 'model_d': state_dict_d}, checkpoint_path)
 
 
 def average_model(model_list, weights=None):
@@ -61,8 +65,14 @@ if __name__ == '__main__':
     print(args.rate)
 
     assert args.rate > 0 and args.rate < 1, f"{args.rate} should be in range (0, 1)"
-    s1 = load_model(args.model1)
-    s2 = load_model(args.model2)
+    s1_g, s1_d = load_model(args.model1)
+    s2_g, s2_d = load_model(args.model2)
 
-    merge = merge_model(s1, s2, args.rate)
-    save_model(merge, "sovits5.0_merge.pth")
+    merge_g = merge_model(s1_g, s2_g, args.rate)
+    
+    # Merge discriminator models if both exist
+    merge_d = None
+    if s1_d is not None and s2_d is not None:
+        merge_d = merge_model(s1_d, s2_d, args.rate)
+    
+    save_model(merge_g, merge_d, "sovits5.0_merge.pth")
