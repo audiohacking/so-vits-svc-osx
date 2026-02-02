@@ -23,9 +23,62 @@
     - [whisper-vits-svc (bigvgan-mix-v2 branch)](https://github.com/PlayVoice/whisper-vits-svc/tree/bigvgan-mix-v2)
     - [Retrieval-based-Voice-Conversion-WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/tree/main)
 
+## Device Support
+
+This project now supports multiple compute devices:
+- **NVIDIA GPUs (CUDA)**: Full support with optimal performance
+- **Apple Silicon (M1/M2/M3 via MPS)**: Hardware acceleration via Metal Performance Shaders
+- **CPU**: Fallback option when no GPU is available
+
+The device is automatically detected and selected based on availability. Priority order: CUDA > MPS > CPU.
+
+### Verifying Device Detection
+
+After installing PyTorch, you can verify that your device is correctly detected:
+
+```shell
+python verify_device.py
+```
+
+This script will display:
+- Your system information and architecture
+- Available compute devices (CUDA/MPS/CPU)
+- Which device will be used for training and inference
+- A simple test to verify the device is working correctly
+
+**Expected output on Apple Silicon Macs:**
+```
+Selected Device:     mps
+Device Type:         mps
+Device Name:         MPS (Apple Silicon)
+✓ Apple Silicon (MPS) GPU acceleration is available and working
+```
+
+**Expected output on NVIDIA GPU systems:**
+```
+Selected Device:     cuda:0
+Device Type:         cuda
+Device Name:         CUDA (NVIDIA GeForce RTX ...)
+✓ CUDA GPU acceleration is available and working
+```
+
+### Running Tests
+
+To run the device detection test suite:
+
+```shell
+# Run all device detection tests
+python -m pytest tests/test_device_detection.py -v
+
+# Or run with unittest
+python tests/test_device_detection.py
+```
+
 ## Setup Environment
 
 1. Install [PyTorch](https://pytorch.org/get-started/locally/).
+   
+   **For Apple Silicon (M1/M2/M3) users**: PyTorch will automatically use MPS (Metal Performance Shaders) for GPU acceleration when available.
 
 2. Install project dependencies
     ```shell
@@ -44,6 +97,48 @@
     ```shell
     python svc_inference.py --config configs/base.yaml --model ./vits_pretrain/sovits5.0.pretrain.pth --spk ./configs/singers/singer0001.npy --wave test.wav
     ```
+
+## Troubleshooting
+
+### For Apple Silicon (M1/M2/M3) Users
+
+If MPS is not detected on your Mac:
+
+1. **Check PyTorch version**: MPS support requires PyTorch 1.12 or later
+   ```shell
+   python -c "import torch; print(torch.__version__)"
+   ```
+
+2. **Verify macOS version**: MPS requires macOS 12.3 or later
+   ```shell
+   sw_vers
+   ```
+
+3. **Install/Update PyTorch**: 
+   ```shell
+   pip3 install --upgrade torch torchvision torchaudio
+   ```
+
+4. **Verify MPS availability**:
+   ```shell
+   python -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
+   ```
+
+5. **Run the verification script** to see detailed diagnostics:
+   ```shell
+   python verify_device.py
+   ```
+
+### Common Issues
+
+**"MPS backend out of memory"**: 
+- MPS has memory limitations. Try reducing batch size or use CPU for large models.
+- You can force CPU usage by setting device preference in the code.
+
+**Performance Issues on MPS**:
+- First run may be slower due to Metal shader compilation
+- Some operations may fall back to CPU automatically
+- Overall performance should still be significantly better than CPU-only
 
 ## Dataset preparation
 

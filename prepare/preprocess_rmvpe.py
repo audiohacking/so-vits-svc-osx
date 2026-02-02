@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 # Import the RMVPE class from your RMVPE module
 from rmvpe.RMVPE import RMVPE
+from utils.device import get_device, get_device_name
 
 def compute_f0(filename, save, rmvpe):
     # Load audio at 16 kHz
@@ -39,7 +40,8 @@ if __name__ == "__main__":
     pitPath = args.pit
 
     # Choose the computation device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
 
     # Initialize RMVPE (here we use full precision; set is_half=True if desired)
     rmvpe = RMVPE(args.model, is_half=False, device=device)

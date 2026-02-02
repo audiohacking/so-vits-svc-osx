@@ -13,6 +13,7 @@ from speaker.models.lstm import LSTMSpeakerEncoder
 from speaker.config import SpeakerEncoderConfig
 from speaker.utils.audio import AudioProcessor
 from speaker.infer import read_json
+from utils.device import is_cuda_available
 
 
 def get_spk_wavs(dataset_path, output_path):
@@ -62,9 +63,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "output_path", type=str, help="path for output speaker/speaker_wavs.npy."
     )
-    parser.add_argument("--use_cuda", type=bool, help="flag to set cuda.", default=True)
+    parser.add_argument("--use_cuda", type=bool, help="Enable GPU acceleration (CUDA, MPS, etc.). When enabled, will use CUDA if available, otherwise MPS on Apple Silicon, then fall back to CPU.", default=True)
     parser.add_argument("-t", "--thread_count", help="thread count to process, set 0 to use all cpu cores", dest="thread_count", type=int, default=1)
     args = parser.parse_args()
+    # Auto-adjust use_cuda for MPS devices
+    if args.use_cuda and not is_cuda_available() and torch.backends.mps.is_available():
+        print("CUDA not available, but MPS (Apple Silicon) detected. Using MPS backend.")
+        args.use_cuda = True  # The speaker encoder will handle MPS automatically
     dataset_path = args.dataset_path
     output_path = args.output_path
     thread_count = args.thread_count

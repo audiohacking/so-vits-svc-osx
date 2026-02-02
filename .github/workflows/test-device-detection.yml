@@ -1,0 +1,108 @@
+name: Test Device Detection
+
+on:
+  push:
+    branches: [ main, copilot/port-so-vits-svg-to-mps ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-macos:
+    name: Test on macOS (Apple Silicon)
+    runs-on: macos-14  # macOS 14 runs on Apple Silicon (M1)
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Display system information
+      run: |
+        echo "=== System Information ==="
+        sw_vers
+        uname -a
+        sysctl -n machdep.cpu.brand_string
+        python --version
+    
+    - name: Install PyTorch
+      run: |
+        echo "=== Installing PyTorch ==="
+        pip3 install torch torchvision torchaudio
+    
+    - name: Verify PyTorch installation
+      run: |
+        python3 -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+        python3 -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
+        python3 -c "import torch; print(f'MPS built: {torch.backends.mps.is_built()}')"
+    
+    - name: Run device verification script
+      run: |
+        echo "=== Running Device Verification Script ==="
+        python3 verify_device.py
+    
+    - name: Run device detection tests
+      run: |
+        echo "=== Running Device Detection Tests ==="
+        python3 tests/test_device_detection.py
+
+  test-linux:
+    name: Test on Linux (CPU)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Display system information
+      run: |
+        echo "=== System Information ==="
+        uname -a
+        python --version
+    
+    - name: Install PyTorch (CPU only)
+      run: |
+        echo "=== Installing PyTorch (CPU) ==="
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    
+    - name: Verify PyTorch installation
+      run: |
+        python3 -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+        python3 -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+    
+    - name: Run device verification script
+      run: |
+        echo "=== Running Device Verification Script ==="
+        python3 verify_device.py
+    
+    - name: Run device detection tests
+      run: |
+        echo "=== Running Device Detection Tests ==="
+        python3 tests/test_device_detection.py
+
+  test-mock:
+    name: Test with Mock (No PyTorch)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Run mock device detection test
+      run: |
+        echo "=== Running Mock Device Detection Test ==="
+        python3 test_mock_device_detection.py

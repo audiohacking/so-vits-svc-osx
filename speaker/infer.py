@@ -1,9 +1,14 @@
 import re
 import json
+import sys
+import os
 import fsspec
 import torch
 import numpy as np
 import argparse
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.device import is_cuda_available
 
 from argparse import RawTextHelpFormatter
 from .models.lstm import LSTMSpeakerEncoder
@@ -53,10 +58,14 @@ if __name__ == "__main__":
         "-t", "--target", help="output 256d speaker embeddimg", dest="target"
     )
 
-    parser.add_argument("--use_cuda", type=bool, help="flag to set cuda.", default=True)
+    parser.add_argument("--use_cuda", type=bool, help="Enable GPU acceleration (CUDA, MPS, etc.). When enabled, will use CUDA if available, otherwise MPS on Apple Silicon, then fall back to CPU.", default=True)
     parser.add_argument("--eval", type=bool, help="compute eval.", default=True)
 
     args = parser.parse_args()
+    # Auto-adjust use_cuda for MPS devices
+    if args.use_cuda and not is_cuda_available() and torch.backends.mps.is_available():
+        print("CUDA not available, but MPS (Apple Silicon) detected. Using MPS backend.")
+        args.use_cuda = True  # The speaker encoder will handle MPS automatically
     source_file = args.source
     target_file = args.target
 

@@ -7,10 +7,11 @@ import random
 from tqdm import tqdm
 from whisper.model import Whisper, ModelDimensions
 from whisper.audio import load_audio, pad_or_trim, log_mel_spectrogram
+from utils.device import get_device, get_device_name
 
 
 def load_model(path) -> Whisper:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
     checkpoint = torch.load(path, map_location="cpu")
     dims = ModelDimensions(**checkpoint["dims"])
     print(dims)

@@ -5,6 +5,7 @@ import librosa
 import argparse
 import numpy as np
 import crepe
+from utils.device import get_device, get_device_name
 
 
 def move_average(a, n, mode="same"):
@@ -127,7 +128,8 @@ if __name__ == "__main__":
     print(args.wav)
     print(args.pit)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
     pitch = compute_f0_sing(args.wav, device)
     save_csv_pitch(pitch, args.pit)
     # tmp = load_csv_pitch(args.pit)

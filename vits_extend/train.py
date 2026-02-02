@@ -9,6 +9,10 @@ import torch.nn.functional as F
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
 import re
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.device import get_device, is_cuda_available
 
 from vits_extend.dataloader import create_dataloader_train
 from vits_extend.dataloader import create_dataloader_eval
@@ -66,8 +70,15 @@ def train(rank, args, chkpt_path, hp, hp_str):
         init_process_group(backend=hp.dist_config.dist_backend, init_method=hp.dist_config.dist_url,
                            world_size=hp.dist_config.world_size * args.num_gpus, rank=rank)
 
-    torch.cuda.manual_seed(hp.train.seed)
-    device = torch.device('cuda:{:d}'.format(rank))
+    # Set device based on what's available
+    if is_cuda_available():
+        torch.cuda.manual_seed(hp.train.seed)
+        device = torch.device('cuda:{:d}'.format(rank))
+    else:
+        # MPS or CPU - only single device training supported
+        if rank != 0:
+            raise ValueError("Multi-device training is only supported with CUDA. MPS and CPU only support single-device training.")
+        device = get_device()
 
     model_g = SynthesizerTrn(
         hp.data.filter_length // 2 + 1,

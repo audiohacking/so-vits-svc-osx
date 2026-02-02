@@ -8,6 +8,7 @@ import torch.multiprocessing as mp
 from omegaconf import OmegaConf
 
 from vits_extend.train import train
+from utils.device import is_gpu_available, is_cuda_available, is_mps_available, get_device_name
 torch.backends.cudnn.benchmark = True
 
 
@@ -30,7 +31,8 @@ if __name__ == '__main__':
 
     args.num_gpus = 0
     torch.manual_seed(hp.train.seed)
-    if torch.cuda.is_available():
+    
+    if is_cuda_available():
         torch.cuda.manual_seed(hp.train.seed)
         args.num_gpus = torch.cuda.device_count()
         print('Batch size per GPU :', hp.train.batch_size)
@@ -40,5 +42,12 @@ if __name__ == '__main__':
                      args=(args, args.checkpoint_path, hp, hp_str,))
         else:
             train(0, args, args.checkpoint_path, hp, hp_str)
+    elif is_mps_available():
+        # MPS backend uses global manual_seed for random number generation
+        print(f"Using device: {get_device_name()}")
+        print('Batch size per GPU :', hp.train.batch_size)
+        args.num_gpus = 1  # Treat MPS as single GPU
+        train(0, args, args.checkpoint_path, hp, hp_str)
     else:
-        print('No GPU find!')
+        print('No GPU found!')
+

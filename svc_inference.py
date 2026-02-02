@@ -13,6 +13,7 @@ from scipy.io.wavfile import write
 from vits.models import SynthesizerInfer
 from pitch import load_csv_pitch
 from feature_retrieval import IRetrieval, DummyRetrieval, FaissIndexRetrieval, load_retrieve_index
+from utils.device import get_device, get_device_name
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -182,7 +183,8 @@ def main(args):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
     hp = OmegaConf.load(args.config)
     model = SynthesizerInfer(
         hp.data.filter_length // 2 + 1,

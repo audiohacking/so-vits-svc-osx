@@ -66,9 +66,62 @@ Powered by [@ShadowVap](https://space.bilibili.com/491283091)
 
 ![mix_frame](https://github.com/PlayVoice/whisper-vits-svc/assets/16432329/3ffa1be0-1a21-4752-96b5-6220f98f2313)
 
+## 设备支持
+
+本项目现已支持多种计算设备：
+- **NVIDIA GPU (CUDA)**: 完整支持，性能最优
+- **Apple Silicon (M1/M2/M3 via MPS)**: 通过Metal Performance Shaders实现硬件加速
+- **CPU**: 当无GPU可用时的备选方案
+
+设备会根据可用性自动检测和选择。优先级顺序：CUDA > MPS > CPU。
+
+### 验证设备检测
+
+安装 PyTorch 后，可以验证设备是否正确检测：
+
+```shell
+python verify_device.py
+```
+
+此脚本将显示：
+- 您的系统信息和架构
+- 可用的计算设备（CUDA/MPS/CPU）
+- 训练和推理将使用哪个设备
+- 一个简单的测试来验证设备正常工作
+
+**Apple Silicon Mac 的预期输出：**
+```
+Selected Device:     mps
+Device Type:         mps
+Device Name:         MPS (Apple Silicon)
+✓ Apple Silicon (MPS) GPU加速可用且正常工作
+```
+
+**NVIDIA GPU 系统的预期输出：**
+```
+Selected Device:     cuda:0
+Device Type:         cuda
+Device Name:         CUDA (NVIDIA GeForce RTX ...)
+✓ CUDA GPU加速可用且正常工作
+```
+
+### 运行测试
+
+运行设备检测测试套件：
+
+```shell
+# 运行所有设备检测测试
+python -m pytest tests/test_device_detection.py -v
+
+# 或使用 unittest 运行
+python tests/test_device_detection.py
+```
+
 ## 安装环境
 
 1. 安装[PyTorch](https://pytorch.org/get-started/locally/)
+
+   **Apple Silicon (M1/M2/M3) 用户**: PyTorch 会自动使用 MPS (Metal Performance Shaders) 进行GPU加速。
 
 2.  安装项目依赖  
     ```
@@ -89,6 +142,48 @@ Powered by [@ShadowVap](https://space.bilibili.com/491283091)
 7.  下载[sovits5.0.pretrain.pth](https://github.com/PlayVoice/so-vits-svc-5.0/releases/tag/5.0/), 把它放到`vits_pretrain/`里面，推理测试
 
     > python svc_inference.py --config configs/base.yaml --model ./vits_pretrain/sovits5.0.pretrain.pth --spk ./configs/singers/singer0001.npy --wave test.wav
+
+## 故障排除
+
+### Apple Silicon (M1/M2/M3) 用户
+
+如果在 Mac 上未检测到 MPS：
+
+1. **检查 PyTorch 版本**: MPS 支持需要 PyTorch 1.12 或更高版本
+   ```shell
+   python -c "import torch; print(torch.__version__)"
+   ```
+
+2. **验证 macOS 版本**: MPS 需要 macOS 12.3 或更高版本
+   ```shell
+   sw_vers
+   ```
+
+3. **安装/更新 PyTorch**: 
+   ```shell
+   pip3 install --upgrade torch torchvision torchaudio
+   ```
+
+4. **验证 MPS 可用性**:
+   ```shell
+   python -c "import torch; print(f'MPS 可用: {torch.backends.mps.is_available()}')"
+   ```
+
+5. **运行验证脚本** 查看详细诊断信息：
+   ```shell
+   python verify_device.py
+   ```
+
+### 常见问题
+
+**"MPS backend out of memory"（MPS 后端内存不足）**: 
+- MPS 有内存限制。尝试减少批次大小或使用 CPU 处理大型模型。
+- 您可以在代码中设置设备首选项强制使用 CPU。
+
+**MPS 性能问题**:
+- 首次运行可能较慢，因为需要编译 Metal 着色器
+- 某些操作可能会自动回退到 CPU
+- 总体性能仍应明显优于纯 CPU 模式
 
 ## 数据集准备
 1. 人声分离，如果数据集没有BGM直接跳过此步骤（推荐使用[UVR](https://github.com/Anjok07/ultimatevocalremovergui)中的3_HP-Vocal-UVR模型或者htdemucs_ft模型抠出数据集中的人声）  
