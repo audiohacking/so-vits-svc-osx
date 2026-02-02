@@ -205,3 +205,5 @@ pretrain/
 !.github/DMG_README.txt
 !VERSION
 !build/macos/*.icns
+!requirements*.txt
+!BUILD_MACOS.md
