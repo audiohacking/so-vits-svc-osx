@@ -66,9 +66,20 @@ Powered by [@ShadowVap](https://space.bilibili.com/491283091)
 
 ![mix_frame](https://github.com/PlayVoice/whisper-vits-svc/assets/16432329/3ffa1be0-1a21-4752-96b5-6220f98f2313)
 
+## 设备支持
+
+本项目现已支持多种计算设备：
+- **NVIDIA GPU (CUDA)**: 完整支持，性能最优
+- **Apple Silicon (M1/M2/M3 via MPS)**: 通过Metal Performance Shaders实现硬件加速
+- **CPU**: 当无GPU可用时的备选方案
+
+设备会根据可用性自动检测和选择。优先级顺序：CUDA > MPS > CPU。
+
 ## 安装环境
 
 1. 安装[PyTorch](https://pytorch.org/get-started/locally/)
+
+   **Apple Silicon (M1/M2/M3) 用户**: PyTorch 会自动使用 MPS (Metal Performance Shaders) 进行GPU加速。
 
 2.  安装项目依赖  
     ```

@@ -23,9 +23,20 @@
     - [whisper-vits-svc (bigvgan-mix-v2 branch)](https://github.com/PlayVoice/whisper-vits-svc/tree/bigvgan-mix-v2)
     - [Retrieval-based-Voice-Conversion-WebUI](https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/tree/main)
 
+## Device Support
+
+This project now supports multiple compute devices:
+- **NVIDIA GPUs (CUDA)**: Full support with optimal performance
+- **Apple Silicon (M1/M2/M3 via MPS)**: Hardware acceleration via Metal Performance Shaders
+- **CPU**: Fallback option when no GPU is available
+
+The device is automatically detected and selected based on availability. Priority order: CUDA > MPS > CPU.
+
 ## Setup Environment
 
 1. Install [PyTorch](https://pytorch.org/get-started/locally/).
+   
+   **For Apple Silicon (M1/M2/M3) users**: PyTorch will automatically use MPS (Metal Performance Shaders) for GPU acceleration when available.
 
 2. Install project dependencies
     ```shell
