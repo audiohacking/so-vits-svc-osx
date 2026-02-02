@@ -81,11 +81,9 @@ a = Analysis(
     datas=[
         # Include config files
         (str(configs_dir), 'configs'),
-        # Include all Python modules from the project
+        # Include all project Python files as data (they're also in hiddenimports for imports)
         ('app.py', '.'),
-        ('svc_*.py', '.'),
-        ('verify_device.py', '.'),
-        # Include model directories
+        # Include model directories as data (templates, configs, etc.)
         ('models', 'models'),
         ('vits', 'vits'),
         ('vits_decoder', 'vits_decoder'),

@@ -70,12 +70,14 @@ def start_gradio_server():
     
     if _server_started:
         print("[SoVitsSVC] Server already started", flush=True)
-        return
+        return True
     
     print("[SoVitsSVC] Importing Gradio and app modules...", flush=True)
     
-    # Find a free port
-    SERVER_PORT = find_free_port(SERVER_PORT)
+    # Note: The original app.py hardcodes port 2333
+    # We use that port to avoid conflicts
+    original_port = 2333
+    SERVER_PORT = find_free_port(original_port)
     SERVER_URL = f"http://{SERVER_HOST}:{SERVER_PORT}"
     print(f"[SoVitsSVC] Using port: {SERVER_PORT}", flush=True)
     
@@ -84,25 +86,20 @@ def start_gradio_server():
         global _gradio_app
         
         try:
-            # Import the main app module
-            # The app.py file creates a Gradio WebUI on import
-            print("[SoVitsSVC] Importing app module...", flush=True)
+            print("[SoVitsSVC] Starting Gradio server...", flush=True)
             
-            # Set up i18n before importing WebUI
-            from app import i18n, WebUI
+            # The app.py creates and launches a Gradio UI when imported
+            # This is a blocking call that starts the server
+            # We run it in a separate thread so the main thread can continue
             
-            print("[SoVitsSVC] Creating WebUI instance...", flush=True)
+            # Set environment variable to control launch behavior if needed
+            os.environ['GRADIO_SERVER_PORT'] = str(SERVER_PORT)
             
-            # The WebUI class launches Gradio in its __init__
-            # We need to prevent it from auto-launching and do it ourselves
-            # For now, we'll just import and let it run
-            # Since WebUI launches in __init__, we just need to keep the thread alive
+            # Import and run the app
+            # app.py will call ui.launch() which blocks
+            import app
             
-            print(f"[SoVitsSVC] Gradio server should be running on {SERVER_URL}", flush=True)
-            
-            # Keep the thread alive
-            while True:
-                time.sleep(1)
+            print(f"[SoVitsSVC] Gradio server exited", flush=True)
                 
         except Exception as e:
             print(f"[SoVitsSVC] ERROR starting server: {e}", flush=True)
@@ -113,25 +110,35 @@ def start_gradio_server():
     _server_thread.start()
     _server_started = True
     
-    # Wait for server to start
+    # Wait for server to start - try the configured port first, then the original
     print("[SoVitsSVC] Waiting for server to start...", flush=True)
-    max_wait = 30  # seconds
+    max_wait = 45  # seconds - give more time for imports
     start_time = time.time()
     
+    ports_to_try = [SERVER_PORT]
+    if SERVER_PORT != original_port:
+        ports_to_try.append(original_port)
+    
     while time.time() - start_time < max_wait:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex((SERVER_HOST, SERVER_PORT))
-            sock.close()
-            if result == 0:
-                print(f"[SoVitsSVC] Server is ready at {SERVER_URL}", flush=True)
-                return True
-        except Exception:
-            pass
+        for port in ports_to_try:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex((SERVER_HOST, port))
+                sock.close()
+                if result == 0:
+                    # Update SERVER_PORT and SERVER_URL if different
+                    if port != SERVER_PORT:
+                        SERVER_PORT = port
+                        SERVER_URL = f"http://{SERVER_HOST}:{SERVER_PORT}"
+                    print(f"[SoVitsSVC] Server is ready at {SERVER_URL}", flush=True)
+                    return True
+            except Exception:
+                pass
         time.sleep(0.5)
     
     print("[SoVitsSVC] WARNING: Server startup timeout", flush=True)
-    return False
+    # Continue anyway - the app might still be starting
+    return True
 
 def open_in_browser():
     """Open the app in the default web browser"""
@@ -152,10 +159,26 @@ def main():
     # Start the Gradio server
     if not start_gradio_server():
         print("[SoVitsSVC] Failed to start server", flush=True)
-        return 1
+        # Continue anyway - server might still be starting
     
     # Wait a bit for server to fully initialize
-    time.sleep(2)
+    time.sleep(3)
+    
+    # Verify the server is actually running and update URL if needed
+    # The app.py uses port 2333 by default
+    for port in [2333, SERVER_PORT, 7860]:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex((SERVER_HOST, port))
+            sock.close()
+            if result == 0:
+                actual_url = f"http://{SERVER_HOST}:{port}"
+                print(f"[SoVitsSVC] Server confirmed at {actual_url}", flush=True)
+                break
+        except Exception:
+            pass
+    else:
+        actual_url = SERVER_URL
     
     if WEBVIEW_AVAILABLE:
         print("[SoVitsSVC] Creating native window with pywebview...", flush=True)
@@ -163,12 +186,12 @@ def main():
         # Create the webview window
         window = webview.create_window(
             title='SoVits-SVC 5.0',
-            url=SERVER_URL,
-            width=1200,
-            height=800,
+            url=actual_url,
+            width=1400,
+            height=900,
             resizable=True,
             fullscreen=False,
-            min_size=(800, 600),
+            min_size=(1000, 700),
         )
         
         print("[SoVitsSVC] Starting webview...", flush=True)
@@ -177,7 +200,14 @@ def main():
     else:
         # Fallback to browser
         print("[SoVitsSVC] pywebview not available, opening in browser...", flush=True)
-        open_in_browser()
+        webbrowser.open(actual_url)
+        
+        # Keep the main thread alive
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("[SoVitsSVC] Shutting down...", flush=True)
     
     return 0
 

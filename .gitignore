@@ -200,3 +200,8 @@ pretrain/
 *.mp4
 *.png
 *.jpg
+
+# Keep specific files needed for builds
+!.github/DMG_README.txt
+!VERSION
+!build/macos/*.icns
