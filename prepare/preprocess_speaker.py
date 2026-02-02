@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "output_path", type=str, help="path for output speaker/speaker_wavs.npy."
     )
-    parser.add_argument("--use_cuda", type=bool, help="flag to set cuda (will automatically use MPS on Apple Silicon if CUDA not available).", default=True)
+    parser.add_argument("--use_cuda", type=bool, help="Enable GPU acceleration (CUDA, MPS, etc.). When enabled, will use CUDA if available, otherwise MPS on Apple Silicon, then fall back to CPU.", default=True)
     parser.add_argument("-t", "--thread_count", help="thread count to process, set 0 to use all cpu cores", dest="thread_count", type=int, default=1)
     args = parser.parse_args()
     # Auto-adjust use_cuda for MPS devices

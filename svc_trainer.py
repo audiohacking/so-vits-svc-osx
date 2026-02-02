@@ -43,7 +43,7 @@ if __name__ == '__main__':
         else:
             train(0, args, args.checkpoint_path, hp, hp_str)
     elif is_mps_available():
-        # MPS doesn't support manual_seed, but we can still train
+        # MPS backend uses global manual_seed for random number generation
         print(f"Using device: {get_device_name()}")
         print('Batch size per GPU :', hp.train.batch_size)
         args.num_gpus = 1  # Treat MPS as single GPU

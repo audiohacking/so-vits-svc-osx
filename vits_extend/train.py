@@ -75,7 +75,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
         torch.cuda.manual_seed(hp.train.seed)
         device = torch.device('cuda:{:d}'.format(rank))
     else:
-        # MPS or CPU
+        # MPS or CPU - only single device training supported
+        if rank != 0:
+            raise ValueError("Multi-device training is only supported with CUDA. MPS and CPU only support single-device training.")
         device = get_device()
 
     model_g = SynthesizerTrn(

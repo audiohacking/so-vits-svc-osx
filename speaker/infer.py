@@ -58,7 +58,7 @@ if __name__ == "__main__":
         "-t", "--target", help="output 256d speaker embeddimg", dest="target"
     )
 
-    parser.add_argument("--use_cuda", type=bool, help="flag to set cuda (will automatically use MPS on Apple Silicon if CUDA not available).", default=True)
+    parser.add_argument("--use_cuda", type=bool, help="Enable GPU acceleration (CUDA, MPS, etc.). When enabled, will use CUDA if available, otherwise MPS on Apple Silicon, then fall back to CPU.", default=True)
     parser.add_argument("--eval", type=bool, help="compute eval.", default=True)
 
     args = parser.parse_args()
