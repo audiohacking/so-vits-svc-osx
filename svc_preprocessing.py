@@ -1,9 +1,13 @@
 import os
+import sys
 import torch
 import argparse
 import subprocess
 
-assert torch.cuda.is_available(), "\033[31m You need GPU to Train! \033[0m"
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils.device import is_gpu_available
+
+assert is_gpu_available(), "\033[31m You need GPU (CUDA or MPS) to Train! \033[0m"
 print("CPU Count is :", os.cpu_count())
 
 parser = argparse.ArgumentParser()

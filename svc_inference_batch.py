@@ -5,6 +5,7 @@ import torch
 import argparse
 
 from whisper.inference import load_model, pred_ppg
+from utils.device import get_device, get_device_name
 
 # How to use
 # python svc_inference_batch.py -- s/base.yaml --model vits_pretrain/sovits5.0.pth --wave test_waves/ --spk s/singers/singer0047.npy
@@ -30,7 +31,8 @@ if __name__ == '__main__':
     waves = [file for file in os.listdir(wave_path) if file.endswith(".wav")]
     for file in waves:
         print(file)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
     whisper = load_model(os.path.join("whisper_pretrain", "large-v2.pt"), device=device)
     for file in tqdm.tqdm(waves, desc="whisper"):
         pred_ppg(whisper, f"{wave_path}/{file}", f"{out_path}/{file}.ppg.npy", device=device)

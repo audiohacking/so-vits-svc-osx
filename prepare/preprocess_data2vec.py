@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from tqdm import tqdm
 from transformers import Data2VecAudioModel, Wav2Vec2Processor
+from utils.device import get_device, get_device_name
 
 
 def load_audio(file: str, sr: int = 16000):
@@ -62,7 +63,8 @@ if __name__ == "__main__":
     wavPath = args.wav
     vecPath = args.vec
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
     model, processor = load_model("facebook/data2vec-audio-large-960h", device)
 
     for spks in os.listdir(wavPath):

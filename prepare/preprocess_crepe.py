@@ -6,6 +6,7 @@ import torch
 import crepe
 import argparse
 from tqdm import tqdm
+from utils.device import get_device, get_device_name
 
 
 def compute_f0(filename, save, device):
@@ -57,7 +58,8 @@ if __name__ == "__main__":
     wavPath = args.wav
     pitPath = args.pit
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
+    print(f"Using device: {get_device_name(device)}")
 
     for spks in os.listdir(wavPath):
         if os.path.isdir(f"./{wavPath}/{spks}"):
