@@ -13,8 +13,12 @@ __pycache__/
 checkpoints/
 # Distribution / packaging
 .Python
-build/
+# Keep build/macos for PyInstaller resources
+build/*
+!build/macos/
+!build/macos/**
 develop-eggs/
+# Keep dist for PyInstaller output temporarily
 dist/
 downloads/
 eggs/
@@ -36,7 +40,8 @@ MANIFEST
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+# Keep our spec file for building
+# *.spec
 
 # Installer logs
 pip-log.txt
