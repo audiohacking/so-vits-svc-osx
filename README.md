@@ -74,6 +74,34 @@ python -m pytest tests/test_device_detection.py -v
 python tests/test_device_detection.py
 ```
 
+## macOS Native App
+
+SoVits-SVC can be bundled as a native macOS application using PyInstaller and pywebview.
+
+### Building the macOS App
+
+On macOS systems, you can build a standalone `.app` bundle:
+
+```shell
+./build_local.sh
+```
+
+This creates `dist/SoVitsSVC.app` which can be distributed to users.
+
+### Features
+
+- **Native macOS app** with pywebview for a native window experience
+- **Code signed** (ad-hoc signing by default, can use Apple Developer certificate)
+- **DMG installer** for easy distribution
+- **Apple Silicon optimized** - automatically uses Metal Performance Shaders (MPS)
+- **No terminal required** - runs as a standard macOS application
+
+### Documentation
+
+For detailed build instructions, see [BUILD_MACOS.md](BUILD_MACOS.md).
+
+For automated builds via GitHub Actions, see [.github/workflows/build-release.yml](.github/workflows/build-release.yml).
+
 ## Setup Environment
 
 1. Install [PyTorch](https://pytorch.org/get-started/locally/).
