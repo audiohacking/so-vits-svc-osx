@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # Import PyInstaller utilities for collecting binaries and data files
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs, collect_all
 import os
 
 block_cipher = None
@@ -72,15 +72,29 @@ try:
 except Exception as e:
     print(f"[SoVitsSVC.spec] WARNING: collect_dynamic_libs('soundfile') failed: {e}")
 
+# Collect yaml (PyYAML) and ruamel.yaml - required by app.py; use collect_all so they are in bundle (PyInstaller paths)
+_yaml_datas, _yaml_binaries, _yaml_hidden = [], [], []
+_ruamel_datas, _ruamel_binaries, _ruamel_hidden = [], [], []
+try:
+    _yaml_datas, _yaml_binaries, _yaml_hidden = collect_all('yaml')
+except Exception as e:
+    print(f"[SoVitsSVC.spec] WARNING: collect_all('yaml') failed: {e}. Install PyYAML for the app to work.")
+try:
+    _ruamel_datas, _ruamel_binaries, _ruamel_hidden = collect_all('ruamel.yaml')
+except Exception as e:
+    print(f"[SoVitsSVC.spec] WARNING: collect_all('ruamel.yaml') failed: {e}. Install ruamel.yaml for the app to work.")
+
 a = Analysis(
     ['sovits_app.py'],
     pathex=[],
-    binaries=_soundfile_binaries + [
+    binaries=_soundfile_binaries + _yaml_binaries + _ruamel_binaries + [
         # Additional binaries can be added here if needed
     ],
     datas=[
         # Include config files
         (str(configs_dir), 'configs'),
+        *_yaml_datas,
+        *_ruamel_datas,
         # Include all project Python files as data (they're also in hiddenimports for imports)
         ('app.py', '.'),
         # Include model directories as data (templates, configs, etc.)
@@ -135,7 +149,9 @@ a = Analysis(
         'scikit-learn',
         'faiss',
         'omegaconf',
-        # Other dependencies
+        # Other dependencies (collect_all above adds yaml/ruamel.yaml into bundle)
+        *_yaml_hidden,
+        *_ruamel_hidden,
         'yaml',
         'ruamel.yaml',
         'matplotlib',

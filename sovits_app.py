@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sys
 import os
+import asyncio
 import threading
 import time
 import socket
@@ -19,12 +20,11 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
 if 'PYTORCH_MPS_HIGH_WATERMARK_RATIO' not in os.environ:
     os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
 
-# For frozen apps: Add the bundle directory to sys.path
+# For frozen apps: Add the bundle directory to sys.path and cwd so configs/ etc. are found
 if getattr(sys, 'frozen', False):
     bundle_dir = sys._MEIPASS
     sys.path.insert(0, bundle_dir)
-    # Set working directory to user's home directory or a reasonable location
-    os.chdir(os.path.expanduser('~'))
+    os.chdir(bundle_dir)  # configs/, pretrain dirs are bundled here
 else:
     bundle_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -85,6 +85,8 @@ def start_gradio_server():
         """Run the Gradio server"""
         global _gradio_app
         
+        # Gradio/Starlette use asyncio; this thread must have an event loop
+        asyncio.set_event_loop(asyncio.new_event_loop())
         try:
             print("[SoVitsSVC] Starting Gradio server...", flush=True)
             
@@ -92,12 +94,13 @@ def start_gradio_server():
             # This is a blocking call that starts the server
             # We run it in a separate thread so the main thread can continue
             
-            # Set environment variable to control launch behavior if needed
+            # Set environment so app uses our port and does not open browser
             os.environ['GRADIO_SERVER_PORT'] = str(SERVER_PORT)
+            os.environ['SOVITS_NATIVE_APP'] = '1'
             
-            # Import and run the app
-            # app.py will call ui.launch() which blocks
+            # Import app then run its UI (app.py only runs WebUI when __name__ == '__main__')
             import app
+            app.webui = app.WebUI()  # blocks until ui.launch() exits
             
             print(f"[SoVitsSVC] Gradio server exited", flush=True)
                 

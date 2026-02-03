@@ -8,7 +8,62 @@ from ruamel.yaml import YAML
 import shutil
 import soundfile
 import shlex
-import locale
+
+# English-only UI strings (no Chinese/locale)
+def i18n(key):
+    return _ENGLISH.get(key, key)
+
+_ENGLISH = {
+    '初始化成功': 'Initialization successful',
+    '就绪': 'Ready',
+    '预处理-训练': 'Preprocessing & Training',
+    '训练说明': 'Training instructions',
+    '### 预处理参数设置': '### Preprocessing settings',
+    '模型名称': 'Model name',
+    'f0提取器': 'F0 extractor',
+    '预处理线程数': 'Preprocessing thread count',
+    '### 训练参数设置': '### Training settings',
+    '学习率': 'Learning rate',
+    '批大小': 'Batch size',
+    '训练日志记录间隔（step）': 'Log interval (steps)',
+    '验证集验证间隔（epoch）': 'Validation interval (epochs)',
+    '检查点保存间隔（epoch）': 'Checkpoint save interval (epochs)',
+    '保留最新的检查点文件(0保存全部)': 'Keep latest checkpoints (0 = keep all)',
+    '是否添加底模': 'Add base model',
+    '### 开始训练': '### Start training',
+    '打开数据集文件夹': 'Open dataset folder',
+    '一键训练': 'One-click training',
+    '启动Tensorboard': 'Start Tensorboard',
+    '### 恢复训练': '### Resume training',
+    '从检查点恢复训练进度': 'Resume from checkpoint',
+    '刷新': 'Refresh',
+    '恢复训练': 'Resume training',
+    '推理': 'Inference',
+    '推理说明': 'Inference instructions',
+    '### 推理参数设置': '### Inference settings',
+    '变调': 'Pitch shift',
+    '文件列表': 'File list',
+    '选择要导出的模型': 'Select model to export',
+    '刷新模型和音色': 'Refresh model and timbre',
+    '导出模型': 'Export model',
+    '选择音色文件': 'Select timbre file',
+    '选择待转换音频': 'Select audio to convert',
+    '开始转换': 'Start conversion',
+    '输出音频': 'Output audio',
+    '打开文件夹失败！': 'Failed to open folder!',
+    '开始预处理': 'Start preprocessing',
+    '开始训练': 'Start training',
+    '开始导出模型': 'Start exporting model',
+    '导出模型成功': 'Model exported successfully',
+    '出现错误：': 'Error:',
+    '缺少模型文件': 'Missing model file',
+    '缺少文件': 'Missing file',
+    '已清理残留文件': 'Residual files cleaned up',
+    '无需清理残留文件': 'No residual files to clean',
+    '开始推理': 'Start inference',
+    '推理成功': 'Inference complete',
+    '### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)第一次编写|[@thestmitsuk](https://github.com/thestmitsuki)二次补完': '### Credits: [@OOPPEENN](https://github.com/OOPPEENN), [@thestmitsuk](https://github.com/thestmitsuki)',
+}
 
 class WebUI:
     def __init__(self):
@@ -143,7 +198,9 @@ class WebUI:
             self.bt_infer.click(fn=self.inference, inputs=[self.input_wav, self.resume_voice, self.keychange], outputs=[self.output_wav])
             self.bt_refersh2.click(fn=self.refresh_model_and_voice, inputs=[self.model_name],outputs=[self.resume_model2, self.resume_voice])
 
-        ui.launch(inbrowser=True, server_port=2333, share=True)
+        server_port = int(os.environ.get('GRADIO_SERVER_PORT', 2333))
+        native_app = os.environ.get('SOVITS_NATIVE_APP') == '1'
+        ui.launch(inbrowser=not native_app, server_port=server_port, share=not native_app)
 
     def openfolder(self):
 
@@ -323,134 +380,5 @@ class Info:
         self.inference = i18n('### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)第一次编写|[@thestmitsuk](https://github.com/thestmitsuki)二次补完')
 
 
-LANGUAGE_LIST = ['zh_CN', 'en_US']
-LANGUAGE_ALL = {
-    'zh_CN': {
-        'SUPER': 'END',
-        'LANGUAGE': 'zh_CN',
-        '初始化成功': '初始化成功',
-        '就绪': '就绪',
-        '预处理-训练': '预处理-训练',
-        '训练说明': '训练说明',
-        '### 预处理参数设置': '### 预处理参数设置',
-        '模型名称': '模型名称',
-        'f0提取器': 'f0提取器',
-        '预处理线程数': '预处理线程数',
-        '### 训练参数设置': '### 训练参数设置',
-        '学习率': '学习率',
-        '批大小': '批大小',
-        '训练日志记录间隔（step）': '训练日志记录间隔（step）',
-        '验证集验证间隔（epoch）': '验证集验证间隔（epoch）',
-        '检查点保存间隔（epoch）': '检查点保存间隔（epoch）',
-        '保留最新的检查点文件(0保存全部)': '保留最新的检查点文件(0保存全部)',
-        '是否添加底模': '是否添加底模',
-        '### 开始训练': '### 开始训练',
-        '打开数据集文件夹': '打开数据集文件夹',
-        '一键训练': '一键训练',
-        '启动Tensorboard': '启动Tensorboard',
-        '### 恢复训练': '### 恢复训练',
-        '从检查点恢复训练进度': '从检查点恢复训练进度',
-        '刷新': '刷新',
-        '恢复训练': '恢复训练',
-        '推理': '推理',
-        '推理说明': '推理说明',
-        '### 推理参数设置': '### 推理参数设置',
-        '变调': '变调',
-        '文件列表': '文件列表',
-        '选择要导出的模型': '选择要导出的模型',
-        '刷新模型和音色': '刷新模型和音色',
-        '导出模型': '导出模型',
-        '选择音色文件': '选择音色文件',
-        '选择待转换音频': '选择待转换音频',
-        '开始转换': '开始转换',
-        '输出音频': '输出音频',
-        '打开文件夹失败！': '打开文件夹失败！',
-        '开始预处理': '开始预处理',
-        '开始训练': '开始训练',
-        '开始导出模型': '开始导出模型',
-        '导出模型成功': '导出模型成功',
-        '出现错误：': '出现错误：',
-        '缺少模型文件': '缺少模型文件',
-        '缺少文件': '缺少文件',
-        '已清理残留文件': '已清理残留文件',
-        '无需清理残留文件': '无需清理残留文件',
-        '开始推理': '开始推理',
-        '推理成功': '推理成功',
-        '### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)第一次编写|[@thestmitsuk](https://github.com/thestmitsuki)二次补完': '### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)第一次编写|[@thestmitsuk](https://github.com/thestmitsuki)二次补完'
-    },
-    'en_US': {
-        'SUPER': 'zh_CN',
-        'LANGUAGE': 'en_US',
-        '初始化成功': 'Initialization successful',
-        '就绪': 'Ready',
-        '预处理-训练': 'Preprocessing-Training',
-        '训练说明': 'Training instructions',
-        '### 预处理参数设置': '### Preprocessing parameter settings',
-        '模型名称': 'Model name',
-        'f0提取器': 'f0 extractor',
-        '预处理线程数': 'Preprocessing thread number',
-        '### 训练参数设置': '### Training parameter settings',
-        '学习率': 'Learning rate',
-        '批大小': 'Batch size',
-        '训练日志记录间隔（step）': 'Training log recording interval (step)',
-        '验证集验证间隔（epoch）': 'Validation set validation interval (epoch)',
-        '检查点保存间隔（epoch）': 'Checkpoint save interval (epoch)',
-        '保留最新的检查点文件(0保存全部)': 'Keep the latest checkpoint file (0 save all)',
-        '是否添加底模': 'Whether to add the base model',
-        '### 开始训练': '### Start training',
-        '打开数据集文件夹': 'Open the dataset folder',
-        '一键训练': 'One-click training',
-        '启动Tensorboard': 'Start Tensorboard',
-        '### 恢复训练': '### Resume training',
-        '从检查点恢复训练进度': 'Restore training progress from checkpoint',
-        '刷新': 'Refresh',
-        '恢复训练': 'Resume training',
-        "推理": "Inference",
-        "推理说明": "Inference instructions",
-        "### 推理参数设置": "### Inference parameter settings",
-        "变调": "Pitch shift",
-        "文件列表": "File list",
-        "选择要导出的模型": "Select the model to export",
-        "刷新模型和音色": "Refresh model and timbre",
-        "导出模型": "Export model",
-        "选择音色文件": "Select timbre file",
-        "选择待转换音频": "Select audio to be converted",
-        "开始转换": "Start conversion",
-        "输出音频": "Output audio",
-        "打开文件夹失败！": "Failed to open folder!",
-        "开始预处理": "Start preprocessing",
-        "开始训练": "Start training",
-        "开始导出模型": "Start exporting model",
-        "导出模型成功": "Model exported successfully",
-        "出现错误：": "An error occurred:",
-        "缺少模型文件": "Missing model file",
-        '缺少文件': 'Missing file',
-        "已清理残留文件": "Residual files cleaned up",
-        "无需清理残留文件": "No need to clean up residual files",
-        "开始推理": "Start inference",
-        '### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)第一次编写|[@thestmitsuk](https://github.com/thestmitsuki)二次补完': '### 2023.7.11|[@OOPPEENN](https://github.com/OOPPEENN)first writing|[@thestmitsuk](https://github.com/thestmitsuki)second completion'
-    }
-}
-
-class I18nAuto:
-    def __init__(self, language=None):
-        self.language_list = LANGUAGE_LIST
-        self.language_all = LANGUAGE_ALL
-        self.language_map = {}
-        self.language = language or locale.getdefaultlocale()[0]
-        if self.language not in self.language_list:
-            self.language = 'zh_CN'
-        self.read_language(self.language_all['zh_CN'])
-        while self.language_all[self.language]['SUPER'] != 'END':
-            self.read_language(self.language_all[self.language])
-            self.language = self.language_all[self.language]['SUPER']
-
-    def read_language(self, lang_dict: dict):
-        self.language_map.update(lang_dict)
-
-    def __call__(self, key):
-        return self.language_map[key]
-
 if __name__ == "__main__":
-    i18n = I18nAuto()
     webui = WebUI()
