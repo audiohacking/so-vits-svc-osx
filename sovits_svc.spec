@@ -51,8 +51,11 @@ try:
     _gradio_data = collect_data_files('gradio')
     if _gradio_data:
         print(f"[SoVitsSVC.spec] Collected gradio data files: {len(_gradio_data)} files")
+    else:
+        raise RuntimeError("collect_data_files('gradio') returned empty list. Gradio UI will not work!")
 except Exception as e:
-    print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio') failed: {e}")
+    print(f"[SoVitsSVC.spec] CRITICAL ERROR: Failed to collect Gradio data files - the built app will have an empty UI screen!")
+    raise RuntimeError(f"Failed to collect Gradio data files. The app UI will not work. Error: {e}")
 
 # Collect gradio_client data files
 _gradio_client_data = []
@@ -60,8 +63,11 @@ try:
     _gradio_client_data = collect_data_files('gradio_client')
     if _gradio_client_data:
         print(f"[SoVitsSVC.spec] Collected gradio_client data files: {len(_gradio_client_data)} files")
+    else:
+        raise RuntimeError("collect_data_files('gradio_client') returned empty list. Gradio UI will not work!")
 except Exception as e:
-    print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio_client') failed: {e}")
+    print(f"[SoVitsSVC.spec] CRITICAL ERROR: Failed to collect gradio_client data files - the built app will have an empty UI screen!")
+    raise RuntimeError(f"Failed to collect gradio_client data files. The app UI will not work. Error: {e}")
 
 # Collect dynamic libraries
 _soundfile_binaries = []
