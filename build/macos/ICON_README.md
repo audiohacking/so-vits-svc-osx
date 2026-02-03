@@ -1,36 +1,14 @@
 # SoVitsSVC macOS Icon
 
-This directory contains `SoVitsSVC.icns` - the application icon for the macOS app bundle.
+This directory should contain `SoVitsSVC.icns` - the application icon for the macOS app bundle.
 
-## Current Icon
+## Creating the Icon
 
-✓ The official SoVitsSVC logo is installed and ready to use!
+To create `SoVitsSVC.icns`:
 
-The colorful "SO VITS SVC" rainbow logo with transparency is now included in the app icon.
-
-## Creating/Updating the Icon
-
-The `create_icon.py` script provides a cross-platform solution for creating the `.icns` file from a PNG image:
-
-```bash
-# Use the default icon.png in this directory
-python3 create_icon.py
-
-# Or specify a different PNG file
-python3 create_icon.py /path/to/your/icon.png
-```
-
-### How It Works
-
-The script:
-- Loads the PNG image (preserving transparency)
-- Generates 7 different icon sizes (16x16 to 1024x1024)
-- Packages them in the macOS `.icns` format
-- Works on Linux, Windows, and macOS (pure Python implementation)
-
-### Manual Creation (macOS Only)
-
-If you prefer using macOS native tools:
+1. Create or obtain a 1024x1024 PNG image for your app icon
+2. Save it as `icon.png` in this directory
+3. Run the following commands to create the .icns file:
 
 ```bash
 # Create iconset directory
@@ -55,40 +33,21 @@ iconutil -c icns SoVitsSVC.iconset
 rm -rf SoVitsSVC.iconset
 ```
 
-## Integration with PyInstaller
-
-The `sovits_svc.spec` file automatically uses the icon when building the macOS app:
-
-```python
-icon_path = spec_root / 'build' / 'macos' / 'SoVitsSVC.icns'
-app = BUNDLE(
-    ...
-    icon=str(icon_path) if icon_path.exists() else None,
-    ...
-)
-```
+## Default Behavior
 
 If `SoVitsSVC.icns` is not present, PyInstaller will use the default Python icon.
+The app will still function correctly without a custom icon.
 
 ## Icon Design Guidelines
 
 For best results, follow Apple's Human Interface Guidelines:
-- Use a 1024x1024 source image (or larger)
-- Ensure transparency is preserved (PNG with alpha channel)
-- Design should be recognizable at all sizes (test at 16x16)
+- Use a 1024x1024 source image
+- Design should be recognizable at all sizes
 - Use simple, bold shapes
 - Avoid fine details that won't scale well
 - Consider using a gradient or 3D effects for depth
-
-## Transparency Notes
-
-The conversion script preserves PNG transparency by:
-- Converting images to RGBA mode if needed
-- Using PNG format for all icon sizes (icns supports PNG)
-- High-quality Lanczos resampling to maintain quality
 
 ## Resources
 
 - [Apple Human Interface Guidelines - App Icons](https://developer.apple.com/design/human-interface-guidelines/app-icons)
 - [iconutil man page](https://ss64.com/osx/iconutil.html)
-- [ICNS Format Specification](https://en.wikipedia.org/wiki/Apple_Icon_Image_format)
