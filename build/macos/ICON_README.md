@@ -4,17 +4,9 @@ This directory contains `SoVitsSVC.icns` - the application icon for the macOS ap
 
 ## Current Icon
 
-The `SoVitsSVC.icns` file is currently a placeholder. To use the official SoVitsSVC logo:
+✓ The official SoVitsSVC logo is installed and ready to use!
 
-1. Download the official logo (transparent PNG) from:
-   https://github.com/user-attachments/assets/3df73889-ef12-41f9-bf05-0b1f5f3b11a3
-
-2. Save it as `icon.png` in this directory (replacing the placeholder)
-
-3. Run the conversion script:
-   ```bash
-   python3 create_icon.py
-   ```
+The colorful "SO VITS SVC" rainbow logo with transparency is now included in the app icon.
 
 ## Creating/Updating the Icon
 
