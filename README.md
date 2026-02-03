@@ -1,4 +1,5 @@
 <div align="center">
+<img width="321" height="321" alt="sovits_logo" src="https://github.com/user-attachments/assets/d3aad6c2-dea8-49e5-9557-621f798b61d1" />
 <h1> Variational Inference with adversarial learning for end-to-end Singing Voice Conversion based on VITS </h1>
     
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/maxmax20160403/sovits5.0)
