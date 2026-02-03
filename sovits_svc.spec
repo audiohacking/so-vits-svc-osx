@@ -67,8 +67,11 @@ try:
     # Also collect other Gradio data files (configs, etc.) but not relying solely on them
     try:
         _gradio_data_extra = collect_data_files('gradio')
-        # Filter out templates since we're including them explicitly
-        _gradio_data_extra = [(src, dst) for src, dst in _gradio_data_extra if 'templates' not in src]
+        # Filter out templates directory since we're including it explicitly
+        # Use path-based check to avoid excluding unrelated files
+        templates_path_str = str(templates_dir)
+        _gradio_data_extra = [(src, dst) for src, dst in _gradio_data_extra 
+                               if not src.startswith(templates_path_str)]
         _gradio_data.extend(_gradio_data_extra)
         print(f"[SoVitsSVC.spec] Collected additional gradio data files: {len(_gradio_data_extra)} files")
     except Exception as e:
@@ -81,7 +84,7 @@ try:
     except Exception as e:
         print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio_client') failed: {e}")
         
-    print(f"[SoVitsSVC.spec] Total gradio data entries: {len(_gradio_data)}")
+    print(f"[SoVitsSVC.spec] Total gradio data entries: {len(_gradio_data)}, gradio_client entries: {len(_gradio_client_data)}")
     
 except Exception as e:
     print(f"[SoVitsSVC.spec] CRITICAL ERROR: Failed to collect Gradio assets!")
