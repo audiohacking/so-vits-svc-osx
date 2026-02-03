@@ -87,8 +87,16 @@ try:
     print(f"[SoVitsSVC.spec] Total gradio data entries: {len(_gradio_data)}, gradio_client entries: {len(_gradio_client_data)}")
     
 except Exception as e:
+    import traceback
+    error_details = traceback.format_exc()
     print(f"[SoVitsSVC.spec] CRITICAL ERROR: Failed to collect Gradio assets!")
-    raise RuntimeError(f"Failed to include Gradio frontend assets. The app UI will not work. Error: {e}")
+    print(f"[SoVitsSVC.spec] Error details:\n{error_details}")
+    raise RuntimeError(
+        f"Failed to include Gradio frontend assets. The app UI will not work.\n"
+        f"Error: {e}\n"
+        f"This may be due to incompatible gradio/gradio-client versions.\n"
+        f"Ensure 'gradio==3.36.1' and 'gradio-client>=0.2.7,<1.0' are installed."
+    )
 
 # Collect dynamic libraries
 _soundfile_binaries = []
