@@ -42,13 +42,15 @@ jobs:
     - name: Display Python version
       run: python --version
       
+    - name: Create virtual environment
+      run: |
+        python -m venv .venv
+        
     - name: Install dependencies
       run: |
+        source .venv/bin/activate
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
-    - name: Install PyInstaller and pywebview
-      run: |
         pip install "pyinstaller>=6.0"
         pip install "pywebview>=4.0"
 
@@ -69,6 +71,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
+        source .venv/bin/activate
         python -m PyInstaller sovits_svc.spec --clean --noconfirm
 
     - name: Set up app bundle executable
