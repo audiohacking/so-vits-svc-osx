@@ -1,0 +1,36 @@
+# macOS-specific requirements for building SoVitsSVC
+# Inherits from requirements.txt but may have platform-specific versions
+
+# Core dependencies (from requirements.txt)
+fsspec
+pyworld
+matplotlib
+soundfile
+scikit-learn
+scipy
+tensorboard
+transformers
+tqdm
+librosa
+omegaconf
+gradio==3.36.1
+ruamel.yaml
+resampy
+numpy==1.24
+chardet
+faiss-cpu==1.7.4
+audiomentations
+
+# Build tools
+pywebview>=4.0
+pyinstaller>=6.0
+
+# macOS-specific: PyTorch with MPS support
+# Users should install PyTorch separately with MPS support:
+# pip3 install torch torchvision torchaudio
+
+# Optional: For CUDA on macOS (not common, but possible with eGPU)
+# Users with CUDA GPUs should install CUDA-enabled PyTorch
+
+# Note: PyTorch is not included in this file as the installation
+# method varies by platform and hardware (MPS vs CUDA vs CPU)
