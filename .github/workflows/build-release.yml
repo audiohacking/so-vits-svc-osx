@@ -38,19 +38,17 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Display Python version
-      run: python --version
-      
-    - name: Install dependencies
+
+    - name: Create venv and install dependencies (match build_local.sh)
       run: |
-        python -m pip install --upgrade pip
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
         pip install -r requirements.txt
-        
-    - name: Install PyInstaller and pywebview
-      run: |
-        pip install "pyinstaller>=6.0"
-        pip install "pywebview>=4.0"
+        pip install pyyaml
+        pip install torch torchaudio torchvision
+        pip install "pyinstaller>=6.0" "pywebview>=4.0"
+        python -c "import gradio; import torch; import yaml; import ruamel.yaml; print('OK')"
 
     - name: Check build/macos assets
       run: |
@@ -69,6 +67,7 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
+        source .venv/bin/activate
         python -m PyInstaller sovits_svc.spec --clean --noconfirm
 
     - name: Set up app bundle executable
