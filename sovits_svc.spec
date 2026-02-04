@@ -45,23 +45,50 @@ try:
 except Exception as e:
     print(f"[SoVitsSVC.spec] WARNING: collect_data_files('soundfile') failed: {e}")
 
-# Collect gradio data files (UI templates, assets)
+# Explicitly include Gradio frontend assets (templates, static files)
+# Using explicit inclusion instead of collect_data_files() for reliability
+# This follows the CTFN-Studio pattern of explicit asset inclusion
 _gradio_data = []
-try:
-    _gradio_data = collect_data_files('gradio')
-    if _gradio_data:
-        print(f"[SoVitsSVC.spec] Collected gradio data files: {len(_gradio_data)} files")
-except Exception as e:
-    print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio') failed: {e}")
-
-# Collect gradio_client data files
 _gradio_client_data = []
 try:
-    _gradio_client_data = collect_data_files('gradio_client')
-    if _gradio_client_data:
+    import gradio
+    import gradio_client
+    gradio_path = Path(gradio.__file__).parent
+    gradio_client_path = Path(gradio_client.__file__).parent
+    
+    # Explicitly include Gradio's templates directory (contains frontend assets)
+    templates_dir = gradio_path / 'templates'
+    if templates_dir.exists():
+        _gradio_data.append((str(templates_dir), 'gradio/templates'))
+        print(f"[SoVitsSVC.spec] Explicitly included gradio/templates directory")
+    else:
+        raise RuntimeError(f"Gradio templates directory not found at {templates_dir}")
+    
+    # Also collect other Gradio data files (configs, etc.) but not relying solely on them
+    try:
+        _gradio_data_extra = collect_data_files('gradio')
+        # Filter out templates directory since we're including it explicitly
+        # Use path-based check to avoid excluding unrelated files
+        templates_path_str = str(templates_dir)
+        _gradio_data_extra = [(src, dst) for src, dst in _gradio_data_extra 
+                               if not src.startswith(templates_path_str)]
+        _gradio_data.extend(_gradio_data_extra)
+        print(f"[SoVitsSVC.spec] Collected additional gradio data files: {len(_gradio_data_extra)} files")
+    except Exception as e:
+        print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio') failed: {e}, but templates are explicitly included")
+    
+    # Collect gradio_client data files
+    try:
+        _gradio_client_data = collect_data_files('gradio_client')
         print(f"[SoVitsSVC.spec] Collected gradio_client data files: {len(_gradio_client_data)} files")
+    except Exception as e:
+        print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio_client') failed: {e}")
+        
+    print(f"[SoVitsSVC.spec] Total gradio data entries: {len(_gradio_data)}, gradio_client entries: {len(_gradio_client_data)}")
+    
 except Exception as e:
-    print(f"[SoVitsSVC.spec] WARNING: collect_data_files('gradio_client') failed: {e}")
+    print(f"[SoVitsSVC.spec] CRITICAL ERROR: Failed to collect Gradio assets!")
+    raise RuntimeError(f"Failed to include Gradio frontend assets. The app UI will not work. Error: {e}")
 
 # Collect dynamic libraries
 _soundfile_binaries = []

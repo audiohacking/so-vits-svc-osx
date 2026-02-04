@@ -66,6 +66,7 @@ jobs:
         rm -rf dist/SoVitsSVC.app dist/SoVitsSVC build/SoVitsSVC
 
     - name: Build with PyInstaller
+      shell: bash
       run: |
         source .venv/bin/activate
         python -m PyInstaller sovits_svc.spec --clean --noconfirm
