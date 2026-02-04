@@ -38,22 +38,17 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Display Python version
-      run: python --version
-      
-    - name: Create virtual environment
+
+    - name: Create venv and install dependencies (match build_local.sh)
       run: |
         python -m venv .venv
-        
-    - name: Install dependencies
-      shell: bash
-      run: |
         source .venv/bin/activate
-        python -m pip install --upgrade pip
+        pip install --upgrade pip
         pip install -r requirements.txt
-        pip install "pyinstaller>=6.0"
-        pip install "pywebview>=4.0"
+        pip install pyyaml
+        pip install torch torchaudio torchvision
+        pip install "pyinstaller>=6.0" "pywebview>=4.0"
+        python -c "import gradio; import torch; import yaml; import ruamel.yaml; print('OK')"
 
     - name: Check build/macos assets
       run: |
